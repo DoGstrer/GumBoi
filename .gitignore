@@ -1,1 +1,7 @@
 /target
+/__pycache__
+/resources
+dehex.py
+opcodes.json
+TEST_ROM.bin
+TEST_ROM.txt
