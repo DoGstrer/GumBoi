@@ -1,28 +1,29 @@
-mod cpu;
-mod memory_bus;
-use crate::cpu::CPU;
-use std::time::{Duration, SystemTime};
-use std::{thread,time};
+/*For Module system : http://www.sheshbabu.com/posts/rust-module-system/
+The syntax is 2015 specific but the core concept remains the same in 2018 as well.
+TL;DR : We need to explicitely build the module tree in Rust, there's no implicit
+mapping between file system to module tree*/
+
 use std::fs;
+use std::env;
+
+mod gumboi;
+use gumboi::GumBoi;
 
 fn main(){
-    let mut cycles:u64=0;
-    let mut cpu = CPU::initialize();
+    let dmg_rom_file_loc: String = env::args().nth(1).unwrap();
+    let catridge_rom_file_loc: String = env::args().nth(2).unwrap();
 
-    let rom_bytes = fs::read("TEST_ROM.bin")
-    .expect("Error Reading File");
-    println!("{:?}",rom_bytes);
+    let dmg_rom: Vec<u8> = read_bin(dmg_rom_file_loc);
+    let catridge_rom: Vec<u8> = read_bin(catridge_rom_file_loc);
+    /*
+    let gumboi = GumBoi::new();
     cpu.bulk_load_addr(rom_bytes.clone());
-
-    let program_time=time::Instant::now();
-    while cpu.get_pc() as usize!=rom_bytes.len(){
-        cpu.execute();
-        cycles+=cpu.get_cycle_count() as u64;
-    }
-    println!("Total Loop Time : {:?}",program_time.elapsed());
-
     cpu.print_registers();
     cpu.print_flags();
+    */    
+}
 
-    println!("{}",cycles);
+fn read_bin(file_name: String) -> Vec<u8>{
+    let binary = fs::read(file_name).unwrap();
+    binary
 }

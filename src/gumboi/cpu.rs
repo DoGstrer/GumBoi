@@ -1,4 +1,4 @@
-use crate::memory_bus::MemoryBus;
+use super::memory_bus::MemoryBus;
 use std::time::{Duration, SystemTime};
 use std::{thread,time};
 
@@ -48,20 +48,20 @@ impl Registers{
 
 }
 
-pub struct CPU{
+pub struct CPU<'a>{
    registers: Registers,
-   memory_bus: MemoryBus,
+   memory_bus: &'a MemoryBus,
    cycle:u8,
    is_halt:bool,
    is_stop:bool,
    gb_clock:Duration,
 }
 
-impl<'life> CPU{
-    pub fn initialize() ->CPU{
+impl<'a> CPU<'a>{
+    pub fn new(memory_bus: &MemoryBus) -> CPU{
         CPU{
             registers:Registers{ a:0x0,b:0x0,c:0x0,d:0x0,e:0x0,f:0x0,h:0x0,l:0x0,sp:0x0,pc:0x0 },
-            memory_bus: MemoryBus::initialize(),
+            memory_bus: memory_bus,
             cycle:0,
             is_halt:false,
             is_stop:false,
@@ -578,6 +578,9 @@ impl<'life> CPU{
     }
     pub fn get_cycle_count(&self) -> u8{
         self.cycle
+    }
+    pub fn hard_reset(&mut self){
+        //TODO
     }
 }
 
