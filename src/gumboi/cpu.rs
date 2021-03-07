@@ -411,6 +411,15 @@ impl CPU for GumBoi{
             0x00 => { self.cycle=4; },
             //HALT
             0x76 => {},
+            //JP NN
+            0xC3 => {
+                self.registers.pc+=1;
+                byte=byte|(self.memory.get_addr(self.registers.pc) as u16);
+                self.registers.pc+=1;
+                byte=byte|(self.memory.get_addr(self.registers.pc) as u16)<<8;
+                self.registers.pc=byte; 
+                self.cycle=16; 
+            }
             _ => ()
         }
         self.registers.pc+=1;
