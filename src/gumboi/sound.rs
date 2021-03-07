@@ -1,7 +1,10 @@
-struct Sound{
+use super::GumBoi;
+
+trait Sound{
     //TODO
 }
 
-impl Sound{
+impl Sound for GumBoi{
     //TODO
 }
+

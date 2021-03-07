@@ -15,12 +15,12 @@ fn main(){
 
     let dmg_rom: Vec<u8> = read_bin(dmg_rom_file_loc);
     let catridge_rom: Vec<u8> = read_bin(catridge_rom_file_loc);
-    /*
+
     let gumboi = GumBoi::new();
-    cpu.bulk_load_addr(rom_bytes.clone());
-    cpu.print_registers();
-    cpu.print_flags();
-    */    
+    gumboi.load(dmg_rom, catridge_rom);
+    gumboi.start();
+    gumboi.exit();
+    
 }
 
 fn read_bin(file_name: String) -> Vec<u8>{

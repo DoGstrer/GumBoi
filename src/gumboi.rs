@@ -1,19 +1,34 @@
-mod cpu;
-mod memory_bus;
+mod registers;
+mod memory;
 mod ppu;
 mod sound;
-mod memory;
+mod cpu;
+mod joypad;
 
-use memory_bus::MemoryBus;
-use cpu::CPU;
+use memory::Memory;
+use registers::Registers;
 
-pub struct GumBoi<'a>{
-    cpu: CPU<'a>,
+pub struct GumBoi{
+    memory: Memory,
+    registers: Registers,
+    cycle: usize
 }
 
-impl<'a> GumBoi<'a>{
-    fn run(){
+impl GumBoi{
+    pub fn new() -> GumBoi{
+        GumBoi{
+            memory: Memory::new(),
+            registers: Registers::new(),
+            cycle: 0
+        }
+    }
+    pub fn load(&self,dmg_rom: Vec<u8>,catridge_rom: Vec<u8>){
+        //TODO
+    }
+    pub fn start(&self){
+        //TODO
+    }
+    pub fn exit(&self){
         //TODO
     }
 }
-
