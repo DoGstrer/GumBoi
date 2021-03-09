@@ -363,6 +363,9 @@ impl CPU for GumBoi{
                 opcode_cb=self.memory.get_addr(self.registers.pc);
 
                 match opcode_cb{
+                    //RL C (check)
+                    0x11 => { self.registers.f=0x0; if self.registers.c >> 7 == 0x1 { self.registers.set_c(); } else {self.registers.reset_c();} self.registers.c = self.registers.c << 1; match self.registers.c { 0x0 => {self.registers.set_z();}, _ => {} } }
+
                     0x37 => { self.registers.f=0x0; self.registers.a=((self.registers.a&0x0f)<<4)|((self.registers.a&0xf0)>>4); if self.registers.a==0x0 {self.registers.set_z();} self.cycle=8; },
                     0x30 => { self.registers.f=0x0; self.registers.b=((self.registers.b&0x0f)<<4)|((self.registers.b&0xf0)>>4); if self.registers.b==0x0 {self.registers.set_z();} self.cycle=8; },
                     0x31 => { self.registers.f=0x0; self.registers.c=((self.registers.c&0x0f)<<4)|((self.registers.c&0xf0)>>4); if self.registers.c==0x0 {self.registers.set_z();} self.cycle=8; },
@@ -388,7 +391,7 @@ impl CPU for GumBoi{
             0x00 => { self.cycle=4; },
             //HALT
             0x76 => {},
-            //JP NN
+            //JP NN (check)
             0xC3 => {
                 self.registers.pc+=1;
                 byte=byte|(self.memory.get_addr(self.registers.pc) as u16);
@@ -397,7 +400,7 @@ impl CPU for GumBoi{
                 self.registers.pc=byte; 
                 self.cycle=16; 
             }
-            //JR NZ i8
+            //JR NZ i8 (check)
             0x20 => { self.registers.pc+=1; byte=self.memory.get_addr(self.registers.pc) as u16; 
                 match self.registers.get_z() { 
                     false => {}, 
@@ -406,7 +409,15 @@ impl CPU for GumBoi{
                         else { self.registers.pc = self.add16(self.registers.pc,byte,self.registers.get_c()); }} 
                     } 
                 }
-            //
+            // CALL NN (check)
+            0xCD => {
+                self.registers.sp-=1; self.memory.set_addr(self.registers.sp,((self.registers.pc & 0xff00) >> 8) as u8);
+                self.registers.sp-=1; self.memory.set_addr(self.registers.sp,(self.registers.pc & 0x00ff) as u8);
+                self.registers.pc+=1; byte=byte|(self.memory.get_addr(self.registers.pc) as u16);
+                self.registers.pc+=1; byte=byte|(self.memory.get_addr(self.registers.pc) as u16) << 8;
+                self.registers.pc = byte;
+                self.cycle = 24;
+            }
             _ => (panic!("Opcode missing in CPU : {:#0x?}",opcode))
         }
         self.registers.pc+=1;

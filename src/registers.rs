@@ -3,7 +3,7 @@ const SET_N:u8=0b01000000;
 const SET_H:u8=0b00100000;
 const SET_C:u8=0b00010000;
 
-#[derive(Debug)]
+#[derive(Debug,PartialEq)]
 pub struct Registers{
     pub a:u8,
     pub b:u8,

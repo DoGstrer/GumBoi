@@ -6,7 +6,6 @@ mapping between file system to module tree*/
 use std::fs;
 use std::env;
 
-mod gumboi;
 use gumboi::GumBoi;
 
 fn main(){
