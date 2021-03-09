@@ -1,6 +1,6 @@
 use super::GumBoi;
 
-trait CPU{
+pub trait CPU{
     fn execute(&mut self);
     fn add8(&mut self,a: u8,b: u8,carry: bool) -> u8;
     fn add16(&mut self,a:u16,b:u16,carry:bool) -> u16;
@@ -140,7 +140,8 @@ impl CPU for GumBoi{
             },
             0x32 => {
                 self.memory.set_addr(self.registers.get_hl(),self.registers.a);
-                self.registers.set_hl(self.registers.get_hl()-0x1);
+                byte = self.sub16(self.registers.get_hl(),0x1,self.registers.get_c());
+                self.registers.set_hl(byte);
                 self.cycle=8;
             },
             0x2A => {
@@ -223,38 +224,13 @@ impl CPU for GumBoi{
             //PUSH
             0xF5 => { self.registers.sp-=1; self.memory.set_addr(self.registers.sp,self.registers.a); self.registers.sp-=1; self.memory.set_addr(self.registers.sp,self.registers.f); self.cycle=16; },
             0xC5 => { self.registers.sp-=1; self.memory.set_addr(self.registers.sp,self.registers.b); self.registers.sp-=1; self.memory.set_addr(self.registers.sp,self.registers.c); self.cycle=16; },
-            0xD5 => {
-                self.registers.sp-=1; self.memory.set_addr(self.registers.sp,self.registers.d);
-                self.registers.sp-=1; self.memory.set_addr(self.registers.sp,self.registers.e);
-                self.cycle=16;
-            },
-            0xE5 => {
-                self.registers.sp-=1; self.memory.set_addr(self.registers.sp,self.registers.h);
-                self.registers.sp-=1; self.memory.set_addr(self.registers.sp,self.registers.l);
-                self.cycle=16;
-            },
+            0xD5 => { self.registers.sp-=1; self.memory.set_addr(self.registers.sp,self.registers.d); self.registers.sp-=1; self.memory.set_addr(self.registers.sp,self.registers.e); self.cycle=16; },
+            0xE5 => { self.registers.sp-=1; self.memory.set_addr(self.registers.sp,self.registers.h); self.registers.sp-=1; self.memory.set_addr(self.registers.sp,self.registers.l); self.cycle=16; },
             //POP
-            0xF1 => {
-                self.registers.f=self.memory.get_addr(self.registers.sp); self.registers.sp+=1;
-                self.registers.a=self.memory.get_addr(self.registers.sp); self.registers.sp+=1;
-                self.cycle=12;
-            },
-            0xC1 => {
-                self.registers.c=self.memory.get_addr(self.registers.sp); self.registers.sp+=1;
-                self.registers.b=self.memory.get_addr(self.registers.sp); self.registers.sp+=1;
-                self.cycle=12;
-            },
-            0xD1 => {
-                self.registers.e=self.memory.get_addr(self.registers.sp); self.registers.sp+=1;
-                self.registers.d=self.memory.get_addr(self.registers.sp); self.registers.sp+=1;
-                self.cycle=12;
-            },
-            0xE1 => {
-                self.registers.l=self.memory.get_addr(self.registers.sp); self.registers.sp+=1;
-                self.registers.h=self.memory.get_addr(self.registers.sp); self.registers.sp+=1;
-                self.cycle=12;
-            },
-            
+            0xF1 => { self.registers.f=self.memory.get_addr(self.registers.sp); self.registers.sp+=1; self.registers.a=self.memory.get_addr(self.registers.sp); self.registers.sp+=1; self.cycle=12; },
+            0xC1 => { self.registers.c=self.memory.get_addr(self.registers.sp); self.registers.sp+=1; self.registers.b=self.memory.get_addr(self.registers.sp); self.registers.sp+=1; self.cycle=12; },
+            0xD1 => { self.registers.e=self.memory.get_addr(self.registers.sp); self.registers.sp+=1; self.registers.d=self.memory.get_addr(self.registers.sp); self.registers.sp+=1; self.cycle=12; },
+            0xE1 => { self.registers.l=self.memory.get_addr(self.registers.sp); self.registers.sp+=1; self.registers.h=self.memory.get_addr(self.registers.sp); self.registers.sp+=1; self.cycle=12; },
             // 8 BIT ALU 
             //ADD
             0x87 => { self.registers.a=self.add8(self.registers.a,self.registers.a,false); self.cycle=4; },
@@ -265,8 +241,7 @@ impl CPU for GumBoi{
             0x84 => { self.registers.a=self.add8(self.registers.a,self.registers.h,false); self.cycle=4; },
             0x85 => { self.registers.a=self.add8(self.registers.a,self.registers.l,false); self.cycle=4; },
             0x86 => { self.registers.a=self.add8(self.registers.a,self.memory.get_addr(self.registers.get_hl()),false); self.cycle=8; },
-            0xC6 => { self.registers.pc+=1; byte=self.memory.get_addr(self.registers.pc) as u16;
-                self.registers.a=self.add8(self.registers.a,byte as u8,false); self.cycle=8; },
+            0xC6 => { self.registers.pc+=1; byte=self.memory.get_addr(self.registers.pc) as u16; self.registers.a=self.add8(self.registers.a,byte as u8,false); self.cycle=8; },
             //ADD WITH CARRY
             0x8F => { self.registers.a=self.add8(self.registers.a,self.registers.a,true); self.cycle=4; },                
             0x88 => { self.registers.a=self.add8(self.registers.a,self.registers.b,true); self.cycle=4; },
@@ -276,8 +251,8 @@ impl CPU for GumBoi{
             0x8C => { self.registers.a=self.add8(self.registers.a,self.registers.h,true); self.cycle=4; },
             0x8D => { self.registers.a=self.add8(self.registers.a,self.registers.l,true); self.cycle=4; },
             0x8E => { self.registers.a=self.add8(self.registers.a,self.memory.get_addr(self.registers.get_hl()),true); self.cycle=8; },
-            0xCE => { self.registers.pc+=1; byte=self.memory.get_addr(self.registers.pc) as u16;
-                self.registers.a=self.add8(self.registers.a,byte as u8,true); self.cycle=8; },
+            0xCE => { self.registers.pc+=1; byte=self.memory.get_addr(self.registers.pc) as u16; 
+                      self.registers.a=self.add8(self.registers.a,byte as u8,true); self.cycle=8; },
             //SUB
             0x97 => { self.registers.a=self.sub8(self.registers.a,self.registers.a,false); self.cycle=4; },
             0x90 => { self.registers.a=self.sub8(self.registers.a,self.registers.b,false); self.cycle=4; },
@@ -288,7 +263,7 @@ impl CPU for GumBoi{
             0x95 => { self.registers.a=self.sub8(self.registers.a,self.registers.l,false); self.cycle=4; },
             0x96 => { self.registers.a=self.sub8(self.registers.a,self.memory.get_addr(self.registers.get_hl()),false); self.cycle=8; },
             0xD6 => { self.registers.pc+=1; byte=self.memory.get_addr(self.registers.pc) as u16;
-                self.registers.a=self.sub8(self.registers.a,byte as u8,false); self.cycle=8; },
+                      self.registers.a=self.sub8(self.registers.a,byte as u8,false); self.cycle=8; },
             //SUB WITH BORROW
             0x9F => { self.registers.a=self.sub8(self.registers.a,self.registers.a,true); self.cycle=4; },
             0x98 => { self.registers.a=self.sub8(self.registers.a,self.registers.b,true); self.cycle=4; },
@@ -299,7 +274,7 @@ impl CPU for GumBoi{
             0x9D => { self.registers.a=self.sub8(self.registers.a,self.registers.l,true); self.cycle=4; },
             0x9E => { self.registers.a=self.sub8(self.registers.a,self.memory.get_addr(self.registers.get_hl()),true); self.cycle=8; },
             0xDE => { self.registers.pc+=1; byte=self.memory.get_addr(self.registers.pc) as u16;
-                self.registers.a=self.sub8(self.registers.a,byte as u8,true); self.cycle=8; },
+                      self.registers.a=self.sub8(self.registers.a,byte as u8,true); self.cycle=8; },
             
             //LOGICAL OPERATIONS
             //AND
@@ -396,7 +371,9 @@ impl CPU for GumBoi{
                     0x34 => { self.registers.f=0x0; self.registers.h=((self.registers.h&0x0f)<<4)|((self.registers.h&0xf0)>>4); if self.registers.h==0x0 {self.registers.set_z();} self.cycle=8; },
                     0x35 => { self.registers.f=0x0; self.registers.l=((self.registers.l&0x0f)<<4)|((self.registers.l&0xf0)>>4); if self.registers.l==0x0 {self.registers.set_z();} self.cycle=8; },
                     0x36 => { self.registers.f=0x0; byte=self.registers.get_hl(); byte8=self.memory.get_addr(byte) ; byte8=((byte8&0x0f)<<4)|((byte8&0xf0)>>4); self.memory.set_addr(byte,byte8); if byte8==0 { self.registers.set_z(); } self.cycle=16;},
-                    _ => (),
+
+                    0x7C => { if !(self.registers.h>>7) == 0x1 { self.registers.set_z(); } else { self.registers.reset_z(); }  self.cycle=4; }
+                    _ => panic!("Opcode missing in CPU CB {:#0x?}",opcode_cb),
                 };
             },
             //DAA
@@ -420,7 +397,17 @@ impl CPU for GumBoi{
                 self.registers.pc=byte; 
                 self.cycle=16; 
             }
-            _ => ()
+            //JR NZ i8
+            0x20 => { self.registers.pc+=1; byte=self.memory.get_addr(self.registers.pc) as u16; 
+                match self.registers.get_z() { 
+                    false => {}, 
+                    true => { 
+                        if byte>>7 == 0x1 { self.registers.pc = self.sub16(self.registers.pc,0x0100-byte,self.registers.get_c()) } 
+                        else { self.registers.pc = self.add16(self.registers.pc,byte,self.registers.get_c()); }} 
+                    } 
+                }
+            //
+            _ => (panic!("Opcode missing in CPU : {:#0x?}",opcode))
         }
         self.registers.pc+=1;
     }

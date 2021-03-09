@@ -5,16 +5,26 @@ Arrays cannot be indexed with u16/u8 etc types which are dependednt on underlyin
 
 pub struct Memory{
     bank: [u8;65536],
+    boot_rom: Vec<u8>
 }
 
 impl Memory{
-    pub fn new() -> Memory{
+    pub fn new(boot_rom: Vec<u8>) -> Memory{
         Memory{
-            bank:[0u8;65536]
+            bank:[0u8;65536],
+            boot_rom: boot_rom
         }
     }
     pub fn get_addr(&self,addr:u16) -> u8{
-        return self.bank[addr as usize];
+        if addr > 0x00ff {
+            self.bank[addr as usize]
+        }
+        else{
+            match self.bank[0xff50]{
+                0x0 => self.boot_rom[addr as usize],
+                _ => self.bank[addr as usize]
+            }
+        }
     }
     pub fn set_addr(&mut self,addr:u16,val:u8){
         self.bank[addr as usize]=val;

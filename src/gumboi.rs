@@ -4,13 +4,16 @@ mod ppu;
 mod sound;
 mod cpu;
 mod joypad;
+mod timer;
+mod interrupt;
+
+use cpu::CPU;
 
 use memory::Memory;
 use registers::Registers;
 
 pub struct GumBoi{
     memory: Memory,
-    boot_rom: Vec<u8>,
     registers: Registers,
     cycle: usize
 }
@@ -18,8 +21,7 @@ pub struct GumBoi{
 impl GumBoi{
     pub fn new(boot_rom: Vec<u8>) -> GumBoi{
         GumBoi{
-            memory: Memory::new(),
-            boot_rom: boot_rom,
+            memory: Memory::new(boot_rom),
             registers: Registers::new(),
             cycle: 0
         }
@@ -33,7 +35,9 @@ impl GumBoi{
         }
     }
     pub fn start(&mut self){
-        //TODO
+        loop{
+            self.execute();
+        }
     }
     pub fn exit(&self){
         //TODO
