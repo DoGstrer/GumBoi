@@ -3,13 +3,14 @@ Arrays cannot be indexed with u16/u8 etc types which are dependednt on underlyin
  RUST DEF : fixed-size array, denoted [T; N], for the element type, T, and the non-negative compile-time constant size, N.
 */
 
+#[derive(PartialEq,Debug)]
 pub struct Memory{
     bank: [u8;65536],
-    boot_rom: Vec<u8>
+    boot_rom: [u8;256],
 }
 
 impl Memory{
-    pub fn new(boot_rom: Vec<u8>) -> Memory{
+    pub fn new(boot_rom: [u8;256]) -> Memory{
         Memory{
             bank:[0u8;65536],
             boot_rom: boot_rom

@@ -1,4 +1,11 @@
+/*TO TEST - 
+add8 : 26 Intructions 
+add16 : 12 instructions
+sub8 : 37 instructions
+sub16 : 7 instructions
+*/
 use super::GumBoi;
+use super::registers::Flag;
 
 pub trait CPU{
     fn execute(&mut self);
@@ -140,8 +147,7 @@ impl CPU for GumBoi{
             },
             0x32 => {
                 self.memory.set_addr(self.registers.get_hl(),self.registers.a);
-                byte = self.sub16(self.registers.get_hl(),0x1,self.registers.get_c());
-                self.registers.set_hl(byte);
+                self.registers.set_hl(self.registers.get_hl()+1);
                 self.cycle=8;
             },
             0x2A => {
@@ -319,30 +325,31 @@ impl CPU for GumBoi{
             0xFE => { self.registers.pc+=1; byte=self.memory.get_addr(self.registers.pc) as u16; self.sub8(self.registers.a,byte as u8,false); self.cycle=8; },
             
             //INC
-            0x3C => { flag=self.registers.get_c(); self.registers.a=self.add8(self.registers.a,0x01,false); if flag {self.registers.set_c();} else{self.registers.reset_c();} self.cycle=4; },
-            0x04 => { flag=self.registers.get_c(); self.registers.b=self.add8(self.registers.b,0x01,false); if flag {self.registers.set_c();} else{self.registers.reset_c();} self.cycle=4; },
-            0x0C => { flag=self.registers.get_c(); self.registers.c=self.add8(self.registers.c,0x01,false); if flag {self.registers.set_c();} else{self.registers.reset_c();} self.cycle=4; },
-            0x14 => { flag=self.registers.get_c(); self.registers.d=self.add8(self.registers.d,0x01,false); if flag {self.registers.set_c();} else{self.registers.reset_c();} self.cycle=4; },
-            0x1C => { flag=self.registers.get_c(); self.registers.e=self.add8(self.registers.e,0x01,false); if flag {self.registers.set_c();} else{self.registers.reset_c();} self.cycle=4; },
-            0x24 => { flag=self.registers.get_c(); self.registers.h=self.add8(self.registers.h,0x01,false); if flag {self.registers.set_c();} else{self.registers.reset_c();} self.cycle=4; },
-            0x2C => { flag=self.registers.get_c(); self.registers.l=self.add8(self.registers.l,0x01,false); if flag {self.registers.set_c();} else{self.registers.reset_c();} self.cycle=4; },
-            0x34 => { flag=self.registers.get_c(); let hl_val=self.add8(self.memory.get_addr(self.registers.get_hl()),0x01,false); self.memory.set_addr(self.registers.get_hl(),hl_val); if flag {self.registers.set_c();} else{self.registers.reset_c();} self.cycle=12; },
+            // INC A [- * 0 *]
+            0x3C => {  self.cycle=4; },
+            0x04 => { flag=self.registers.is_set_c(); self.registers.b=self.add8(self.registers.b,0x01,false); if flag {self.registers.set_c();} else{self.registers.reset_c();} self.cycle=4; },
+            0x0C => { flag=self.registers.is_set_c(); self.registers.c=self.add8(self.registers.c,0x01,false); if flag {self.registers.set_c();} else{self.registers.reset_c();} self.cycle=4; },
+            0x14 => { flag=self.registers.is_set_c(); self.registers.d=self.add8(self.registers.d,0x01,false); if flag {self.registers.set_c();} else{self.registers.reset_c();} self.cycle=4; },
+            0x1C => { flag=self.registers.is_set_c(); self.registers.e=self.add8(self.registers.e,0x01,false); if flag {self.registers.set_c();} else{self.registers.reset_c();} self.cycle=4; },
+            0x24 => { flag=self.registers.is_set_c(); self.registers.h=self.add8(self.registers.h,0x01,false); if flag {self.registers.set_c();} else{self.registers.reset_c();} self.cycle=4; },
+            0x2C => { flag=self.registers.is_set_c(); self.registers.l=self.add8(self.registers.l,0x01,false); if flag {self.registers.set_c();} else{self.registers.reset_c();} self.cycle=4; },
+            0x34 => { flag=self.registers.is_set_c(); let hl_val=self.add8(self.memory.get_addr(self.registers.get_hl()),0x01,false); self.memory.set_addr(self.registers.get_hl(),hl_val); if flag {self.registers.set_c();} else{self.registers.reset_c();} self.cycle=12; },
             //DEC
-            0x3D => { flag=self.registers.get_c(); self.registers.a=self.sub8(self.registers.a,0x01,false); if flag {self.registers.set_c();} else{self.registers.reset_c();} self.cycle=4; },
-            0x05 => { flag=self.registers.get_c(); self.registers.b=self.sub8(self.registers.b,0x01,false); if flag {self.registers.set_c();} else{self.registers.reset_c();} self.cycle=4; },
-            0x0D => { flag=self.registers.get_c(); self.registers.c=self.sub8(self.registers.c,0x01,false); if flag {self.registers.set_c();} else{self.registers.reset_c();} self.cycle=4; },
-            0x15 => { flag=self.registers.get_c(); self.registers.d=self.sub8(self.registers.d,0x01,false); if flag {self.registers.set_c();} else{self.registers.reset_c();} self.cycle=4; },
-            0x1D => { flag=self.registers.get_c(); self.registers.e=self.sub8(self.registers.e,0x01,false); if flag {self.registers.set_c();} else{self.registers.reset_c();} self.cycle=4; },
-            0x25 => { flag=self.registers.get_c(); self.registers.h=self.sub8(self.registers.h,0x01,false); if flag {self.registers.set_c();} else{self.registers.reset_c();} self.cycle=4; },
-            0x2D => { flag=self.registers.get_c(); self.registers.l=self.sub8(self.registers.l,0x01,false); if flag {self.registers.set_c();} else{self.registers.reset_c();} self.cycle=4; },
-            0x35 => { flag=self.registers.get_c(); let hl_val=self.sub8(self.memory.get_addr(self.registers.get_hl()),0x01,false); self.memory.set_addr(self.registers.get_hl(),hl_val); if flag {self.registers.set_c();} else{self.registers.reset_c();} self.cycle=12; },
+            0x3D => { flag=self.registers.is_set_c(); self.registers.a=self.sub8(self.registers.a,0x01,false); if flag {self.registers.set_c();} else{self.registers.reset_c();} self.cycle=4; },
+            0x05 => { flag=self.registers.is_set_c(); self.registers.b=self.sub8(self.registers.b,0x01,false); if flag {self.registers.set_c();} else{self.registers.reset_c();} self.cycle=4; },
+            0x0D => { flag=self.registers.is_set_c(); self.registers.c=self.sub8(self.registers.c,0x01,false); if flag {self.registers.set_c();} else{self.registers.reset_c();} self.cycle=4; },
+            0x15 => { flag=self.registers.is_set_c(); self.registers.d=self.sub8(self.registers.d,0x01,false); if flag {self.registers.set_c();} else{self.registers.reset_c();} self.cycle=4; },
+            0x1D => { flag=self.registers.is_set_c(); self.registers.e=self.sub8(self.registers.e,0x01,false); if flag {self.registers.set_c();} else{self.registers.reset_c();} self.cycle=4; },
+            0x25 => { flag=self.registers.is_set_c(); self.registers.h=self.sub8(self.registers.h,0x01,false); if flag {self.registers.set_c();} else{self.registers.reset_c();} self.cycle=4; },
+            0x2D => { flag=self.registers.is_set_c(); self.registers.l=self.sub8(self.registers.l,0x01,false); if flag {self.registers.set_c();} else{self.registers.reset_c();} self.cycle=4; },
+            0x35 => { flag=self.registers.is_set_c(); let hl_val=self.sub8(self.memory.get_addr(self.registers.get_hl()),0x01,false); self.memory.set_addr(self.registers.get_hl(),hl_val); if flag {self.registers.set_c();} else{self.registers.reset_c();} self.cycle=12; },
 
             //16 BIT ALU
             //ADD HL 
-            0x09 => { flag=self.registers.get_z(); byte=self.add16(self.registers.get_hl(),self.registers.get_bc(),false); self.registers.set_hl(byte); if flag { self.registers.set_z(); } else {self.registers.reset_z();} self.cycle=8; },
-            0x19 => { flag=self.registers.get_z(); byte=self.add16(self.registers.get_hl(),self.registers.get_de(),false); self.registers.set_hl(byte); if flag { self.registers.set_z(); } else {self.registers.reset_z();} self.cycle=8; },
-            0x29 => { flag=self.registers.get_z(); byte=self.add16(self.registers.get_hl(),self.registers.get_hl(),false); self.registers.set_hl(byte); if flag { self.registers.set_z(); } else {self.registers.reset_z();} self.cycle=8; },
-            0x39 => { flag=self.registers.get_z(); byte=self.add16(self.registers.get_hl(),self.registers.sp,false); self.registers.set_hl(byte); if flag { self.registers.set_z(); } else {self.registers.reset_z();} self.cycle=8; },
+            0x09 => { flag=self.registers.is_set_z(); byte=self.add16(self.registers.get_hl(),self.registers.get_bc(),false); self.registers.set_hl(byte); if flag { self.registers.set_z(); } else {self.registers.reset_z();} self.cycle=8; },
+            0x19 => { flag=self.registers.is_set_z(); byte=self.add16(self.registers.get_hl(),self.registers.get_de(),false); self.registers.set_hl(byte); if flag { self.registers.set_z(); } else {self.registers.reset_z();} self.cycle=8; },
+            0x29 => { flag=self.registers.is_set_z(); byte=self.add16(self.registers.get_hl(),self.registers.get_hl(),false); self.registers.set_hl(byte); if flag { self.registers.set_z(); } else {self.registers.reset_z();} self.cycle=8; },
+            0x39 => { flag=self.registers.is_set_z(); byte=self.add16(self.registers.get_hl(),self.registers.sp,false); self.registers.set_hl(byte); if flag { self.registers.set_z(); } else {self.registers.reset_z();} self.cycle=8; },
             //ADD SP
             0xE8 => { self.registers.pc+=1; self.registers.sp=self.add16(self.registers.sp,self.memory.get_addr(self.registers.pc) as u16,false);self.registers.reset_z(); self.registers.reset_n(); self.cycle=16; },
             //INC
@@ -364,7 +371,17 @@ impl CPU for GumBoi{
 
                 match opcode_cb{
                     //RL C (check)
-                    0x11 => { self.registers.f=0x0; if self.registers.c >> 7 == 0x1 { self.registers.set_c(); } else {self.registers.reset_c();} self.registers.c = self.registers.c << 1; match self.registers.c { 0x0 => {self.registers.set_z();}, _ => {} } }
+                    0x11 => { 
+                        self.registers.f=0x0; 
+                        if self.registers.c >> 7 == 0x1 { 
+                            self.registers.set_c(); 
+                        } 
+                        self.registers.c = self.registers.c << 1; 
+                        match self.registers.c { 
+                            0x0 => {self.registers.set_z();},
+                            _ => {} }; 
+                        self.cycle=8; 
+                        }
 
                     0x37 => { self.registers.f=0x0; self.registers.a=((self.registers.a&0x0f)<<4)|((self.registers.a&0xf0)>>4); if self.registers.a==0x0 {self.registers.set_z();} self.cycle=8; },
                     0x30 => { self.registers.f=0x0; self.registers.b=((self.registers.b&0x0f)<<4)|((self.registers.b&0xf0)>>4); if self.registers.b==0x0 {self.registers.set_z();} self.cycle=8; },
@@ -384,7 +401,7 @@ impl CPU for GumBoi{
             //CPL
             0x2F => { self.registers.a=!self.registers.a; self.registers.set_n(); self.registers.set_h(); self.cycle=4; },
             //CCF
-            0x3F => { if self.registers.get_c() {self.registers.reset_c();} else {self.registers.set_c();} self.registers.reset_n(); self.registers.reset_h(); self.cycle=4; },
+            0x3F => { if self.registers.is_set_c() {self.registers.reset_c();} else {self.registers.set_c();} self.registers.reset_n(); self.registers.reset_h(); self.cycle=4; },
             //SCF
             0x37 => { self.registers.set_c(); self.registers.reset_n(); self.registers.reset_h(); self.cycle=4; },
             //NOP (there just for formality)
@@ -402,11 +419,11 @@ impl CPU for GumBoi{
             }
             //JR NZ i8 (check)
             0x20 => { self.registers.pc+=1; byte=self.memory.get_addr(self.registers.pc) as u16; 
-                match self.registers.get_z() { 
+                match self.registers.is_set_z() { 
                     false => {}, 
                     true => { 
-                        if byte>>7 == 0x1 { self.registers.pc = self.sub16(self.registers.pc,0x0100-byte,self.registers.get_c()) } 
-                        else { self.registers.pc = self.add16(self.registers.pc,byte,self.registers.get_c()); }} 
+                        if byte>>7 == 0x1 { self.registers.pc = self.sub16(self.registers.pc,0x0100-byte,false) } 
+                        else { self.registers.pc = self.add16(self.registers.pc,byte,false); }} 
                     } 
                 }
             // CALL NN (check)
@@ -418,13 +435,29 @@ impl CPU for GumBoi{
                 self.registers.pc = byte;
                 self.cycle = 24;
             }
+            //RLA
+            0x17 => { 
+                byte8 = self.registers.f; 
+                self.registers.f=0x0; 
+                if self.registers.a >> 7 == 0x1 { self.registers.set_c(); } 
+                self.registers.a = self.registers.a << 1 | (byte8 & 0b00010000) >> 4 ;
+            }
+            //RET [- - - -]
+            0xC9 => {
+                byte = self.memory.get_addr(self.registers.sp) as u16;
+                self.registers.sp+=0x1;
+                byte = ((self.memory.get_addr(self.registers.sp) as u16) << 8) | byte;
+                self.registers.sp+=0x1;
+                self.registers.pc = byte;
+                self.cycle = 16;
+            }
             _ => (panic!("Opcode missing in CPU : {:#0x?}",opcode))
         }
         self.registers.pc+=1;
     }
     fn add8(&mut self,a:u8,b:u8,carry:bool) -> u8{
         let mut carry_val:u8=0;
-        if carry==true && (self.registers.get_c()) { carry_val=0x1; }
+        if carry==true && (self.registers.is_set_c()) { carry_val=0x1; }
         self.registers.f=0x0;
         if (a & 0x0f)+(b & 0x0f) + carry_val > 0x0f { self.registers.set_h(); }
         match a.checked_add(b){ 
@@ -439,7 +472,7 @@ impl CPU for GumBoi{
     }
     fn add16(&mut self,a:u16,b:u16,carry:bool) -> u16{
         let mut carry_val:u16=0;
-        if carry==true && (self.registers.get_c()) { carry_val=0x1; }
+        if carry==true && (self.registers.is_set_c()) { carry_val=0x1; }
         self.registers.f=0x0;
         if (a & 0xff)+(b & 0xff) + carry_val > 0xff { self.registers.set_h(); }
         match a.checked_add(b){ 
@@ -454,7 +487,7 @@ impl CPU for GumBoi{
     }
     fn sub8(&mut self,a:u8,b:u8,carry:bool) -> u8{
         let mut carry_val:u8=0;
-        if carry==true && (self.registers.get_c()) {println!("inside carry"); carry_val=0x1; }
+        if carry==true && (self.registers.is_set_c()) {println!("inside carry"); carry_val=0x1; }
         self.registers.f=0x0; self.registers.set_n();
         if a&0x0f < (b + carry_val)&0x0f { self.registers.set_h(); println!("h set");}
         if a < ((((b as u16)+(carry_val as u16)) & (0x00ff)) as u8) { self.registers.set_c(); }
@@ -466,7 +499,7 @@ impl CPU for GumBoi{
     }
     fn sub16(&mut self,a:u16,b:u16,carry:bool) -> u16{
         let mut carry_val:u16=0;
-        if carry==true && (self.registers.get_c()) {println!("inside carry"); carry_val=0x1; }
+        if carry==true && (self.registers.is_set_c()) {println!("inside carry"); carry_val=0x1; }
         self.registers.f=0x0; self.registers.set_n();
         if a&0xff < (b + carry_val)&0xff { self.registers.set_h(); println!("h set");}
         if a < ((((b as u32)+(carry_val as u32)) & (0x00ff)) as u16) { self.registers.set_c(); }
@@ -480,7 +513,7 @@ impl CPU for GumBoi{
     fn daa(&mut self,a:u8) -> u8{
         let mut byte_ms:u8=a>>4;
         let mut byte_ls:u8=a&0x0f;
-        if (byte_ls >9) | self.registers.get_h() {
+        if (byte_ls >9) | self.registers.is_set_h() {
             byte_ls+=0x06;
             if byte_ls&0x10 == 0x10{
                 byte_ls=byte_ls&0x0f;
@@ -491,7 +524,7 @@ impl CPU for GumBoi{
                 }
             }
         }
-        if (byte_ms>9) | self.registers.get_c(){
+        if (byte_ms>9) | self.registers.is_set_c(){
             byte_ms+=0x06;
             self.registers.set_c();
         }
