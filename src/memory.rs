@@ -3,7 +3,9 @@ Arrays cannot be indexed with u16/u8 etc types which are dependednt on underlyin
  RUST DEF : fixed-size array, denoted [T; N], for the element type, T, and the non-negative compile-time constant size, N.
 */
 
-#[derive(PartialEq,Debug)]
+use std::fmt;
+
+#[derive(PartialEq)]
 pub struct Memory{
     bank: [u8;65536],
     boot_rom: [u8;256],
@@ -29,5 +31,11 @@ impl Memory{
     }
     pub fn set_addr(&mut self,addr:u16,val:u8){
         self.bank[addr as usize]=val;
+    }
+}
+
+impl fmt::Debug for Memory{
+    fn fmt(&self,f: &mut fmt::Formatter<'_>) -> fmt::Result{
+        write!(f,"")
     }
 }
