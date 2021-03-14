@@ -8,14 +8,14 @@ use std::fmt;
 #[derive(PartialEq)]
 pub struct Memory{
     bank: [u8;65536],
-    boot_rom: [u8;256],
+    pub boot_rom: [u8;256],
 }
 
 impl Memory{
-    pub fn new(boot_rom: [u8;256]) -> Memory{
+    pub fn new() -> Memory{
         Memory{
             bank:[0u8;65536],
-            boot_rom: boot_rom
+            boot_rom: [0u8;256],
         }
     }
     pub fn get_addr(&self,addr:u16) -> u8{

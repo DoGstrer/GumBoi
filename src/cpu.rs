@@ -41,12 +41,16 @@ impl CPU for GumBoi{
 
         match opcode{
             //8 bit LD
-            0x06 => { self.registers.pc+=1; self.registers.b=self.memory.get_addr(self.registers.pc); self.cycle=8; },
-            0x0E => { self.registers.pc+=1; self.registers.c=self.memory.get_addr(self.registers.pc); self.cycle=8; },
-            0x16 => { self.registers.pc+=1; self.registers.d=self.memory.get_addr(self.registers.pc); self.cycle=8; },
-            0x1E => { self.registers.pc+=1; self.registers.e=self.memory.get_addr(self.registers.pc); self.cycle=8; },
-            0x26 => { self.registers.pc+=1; self.registers.h=self.memory.get_addr(self.registers.pc); self.cycle=8; },
-            0x2E => { self.registers.pc+=1; self.registers.l=self.memory.get_addr(self.registers.pc); self.cycle=8; },
+            // LD r d8 [- - - -]
+            0x3E => { self.registers.a = self.get_next_byte8(); self.cycle=8; },
+            0x06 => { self.registers.b = self.get_next_byte8(); self.cycle=8; },
+            0x0E => { self.registers.c = self.get_next_byte8(); self.cycle=8; },
+            0x16 => { self.registers.d = self.get_next_byte8(); self.cycle=8; },
+            0x1E => { self.registers.e = self.get_next_byte8(); self.cycle=8; },
+            0x26 => { self.registers.h = self.get_next_byte8(); self.cycle=8; },
+            0x2E => { self.registers.l = self.get_next_byte8(); self.cycle=8; },
+            0x36 => { byte8 = self.get_next_byte8(); self.memory.set_addr(self.registers.get_hl(),byte8); self.cycle=12; },
+            
             0x7F => { self.registers.a=self.registers.a; self.cycle=4; },
             0x78 => { self.registers.a=self.registers.b; self.cycle=4; },
             0x79 => { self.registers.a=self.registers.c; self.cycle=4; },
@@ -103,11 +107,11 @@ impl CPU for GumBoi{
             0x73 => { self.memory.set_addr(self.registers.get_hl(),self.registers.e); self.cycle=8; },
             0x74 => { self.memory.set_addr(self.registers.get_hl(),self.registers.h); self.cycle=8; },
             0x75 => { self.memory.set_addr(self.registers.get_hl(),self.registers.l); self.cycle=8; },
-            0x36 => { self.registers.pc+=1; self.memory.set_addr(self.registers.get_hl(),self.memory.get_addr(self.registers.pc)); self.cycle=12; },
+            
             0x0A => { self.registers.a=self.memory.get_addr(self.registers.get_bc()); self.cycle=8; },
             0x1A => { self.registers.a=self.memory.get_addr(self.registers.get_de()); self.cycle=8; },
-            0xFA => { self.registers.pc+=1; byte=byte|(self.memory.get_addr(self.registers.pc) as u16); self.registers.pc+=1; byte=byte|(self.memory.get_addr(self.registers.pc) as u16)<<8; self.registers.a=self.memory.get_addr(byte); self.cycle=16; },
-            0x3E => { self.registers.pc+=1; self.registers.a=self.memory.get_addr(self.registers.pc); self.cycle=8; },
+            0xFA => { self.registers.pc+=1; byte=self.get_next_byte16(); self.registers.a=self.memory.get_addr(byte); self.cycle=16; },
+            
             0x47 => { self.registers.b=self.registers.a; self.cycle=4; },
             0x4F => { self.registers.c=self.registers.a; self.cycle=4; },
             0x57 => {
@@ -296,35 +300,35 @@ impl CPU for GumBoi{
             
             //LOGICAL OPERATIONS
             //AND
-            0xA7 => {self.registers.a&=self.registers.a; self.registers.f=0x0; self.registers.set_h(); if self.registers.a==0x0 {self.registers.set_z();}self.cycle=4;},
-            0xA0 => {self.registers.a&=self.registers.b; self.registers.f=0x0; self.registers.set_h(); if self.registers.a==0x0 {self.registers.set_z();}self.cycle=4;},
-            0xA1 => {self.registers.a&=self.registers.c; self.registers.f=0x0; self.registers.set_h(); if self.registers.a==0x0 {self.registers.set_z();}self.cycle=4;},
-            0xA2 => {self.registers.a&=self.registers.d; self.registers.f=0x0; self.registers.set_h(); if self.registers.a==0x0 {self.registers.set_z();}self.cycle=4;},
-            0xA3 => {self.registers.a&=self.registers.e; self.registers.f=0x0; self.registers.set_h(); if self.registers.a==0x0 {self.registers.set_z();}self.cycle=4;},
-            0xA4 => {self.registers.a&=self.registers.h; self.registers.f=0x0; self.registers.set_h(); if self.registers.a==0x0 {self.registers.set_z();}self.cycle=4;},
-            0xA5 => {self.registers.a&=self.registers.l; self.registers.f=0x0; self.registers.set_h(); if self.registers.a==0x0 {self.registers.set_z();}self.cycle=4;},
-            0xA6 => {self.registers.a&=self.memory.get_addr(self.registers.get_hl()); self.registers.f=0x0; self.registers.set_h(); if self.registers.a==0x0 {self.registers.set_z();}self.cycle=8;},
-            0xE6 => {self.registers.pc+=1; self.registers.a&=self.memory.get_addr(self.registers.pc); self.registers.f=0x0; self.registers.set_h(); if self.registers.a==0x0 {self.registers.set_z();}self.cycle=8;},
+            0xA7 => {self.registers.a&=self.registers.a; self.registers.reset_flags(); self.registers.set_h(); if self.registers.a==0x0 {self.registers.set_z();}self.cycle=4;},
+            0xA0 => {self.registers.a&=self.registers.b; self.registers.reset_flags(); self.registers.set_h(); if self.registers.a==0x0 {self.registers.set_z();}self.cycle=4;},
+            0xA1 => {self.registers.a&=self.registers.c; self.registers.reset_flags(); self.registers.set_h(); if self.registers.a==0x0 {self.registers.set_z();}self.cycle=4;},
+            0xA2 => {self.registers.a&=self.registers.d; self.registers.reset_flags(); self.registers.set_h(); if self.registers.a==0x0 {self.registers.set_z();}self.cycle=4;},
+            0xA3 => {self.registers.a&=self.registers.e; self.registers.reset_flags(); self.registers.set_h(); if self.registers.a==0x0 {self.registers.set_z();}self.cycle=4;},
+            0xA4 => {self.registers.a&=self.registers.h; self.registers.reset_flags(); self.registers.set_h(); if self.registers.a==0x0 {self.registers.set_z();}self.cycle=4;},
+            0xA5 => {self.registers.a&=self.registers.l; self.registers.reset_flags(); self.registers.set_h(); if self.registers.a==0x0 {self.registers.set_z();}self.cycle=4;},
+            0xA6 => {self.registers.a&=self.memory.get_addr(self.registers.get_hl()); self.registers.reset_flags(); self.registers.set_h(); if self.registers.a==0x0 {self.registers.set_z();}self.cycle=8;},
+            0xE6 => {self.registers.pc+=1; self.registers.a&=self.memory.get_addr(self.registers.pc); self.registers.reset_flags(); self.registers.set_h(); if self.registers.a==0x0 {self.registers.set_z();}self.cycle=8;},
             //OR
-            0xB7 => {self.registers.a|=self.registers.a; self.registers.f=0x0; if self.registers.a==0x0 {self.registers.set_z();}self.cycle=4;},
-            0xB0 => {self.registers.a|=self.registers.b; self.registers.f=0x0; if self.registers.a==0x0 {self.registers.set_z();}self.cycle=4;},
-            0xB1 => {self.registers.a|=self.registers.c; self.registers.f=0x0; if self.registers.a==0x0 {self.registers.set_z();}self.cycle=4;},
-            0xB2 => {self.registers.a|=self.registers.d; self.registers.f=0x0; if self.registers.a==0x0 {self.registers.set_z();}self.cycle=4;},
-            0xB3 => {self.registers.a|=self.registers.e; self.registers.f=0x0; if self.registers.a==0x0 {self.registers.set_z();}self.cycle=4;},
-            0xB4 => {self.registers.a|=self.registers.h; self.registers.f=0x0; if self.registers.a==0x0 {self.registers.set_z();}self.cycle=4;},
-            0xB5 => {self.registers.a|=self.registers.l; self.registers.f=0x0; if self.registers.a==0x0 {self.registers.set_z();}self.cycle=4;},
-            0xB6 => {self.registers.a|=self.memory.get_addr(self.registers.get_hl()); self.registers.f=0x0; if self.registers.a==0x0 {self.registers.set_z();}self.cycle=8;},
-            0xF6 => {self.registers.pc+=1; self.registers.a|=self.memory.get_addr(self.registers.pc); self.registers.f=0x0; if self.registers.a==0x0 {self.registers.set_z();}self.cycle=8;},
+            0xB7 => {self.registers.a|=self.registers.a; self.registers.reset_flags(); if self.registers.a==0x0 {self.registers.set_z();}self.cycle=4;},
+            0xB0 => {self.registers.a|=self.registers.b; self.registers.reset_flags(); if self.registers.a==0x0 {self.registers.set_z();}self.cycle=4;},
+            0xB1 => {self.registers.a|=self.registers.c; self.registers.reset_flags(); if self.registers.a==0x0 {self.registers.set_z();}self.cycle=4;},
+            0xB2 => {self.registers.a|=self.registers.d; self.registers.reset_flags(); if self.registers.a==0x0 {self.registers.set_z();}self.cycle=4;},
+            0xB3 => {self.registers.a|=self.registers.e; self.registers.reset_flags(); if self.registers.a==0x0 {self.registers.set_z();}self.cycle=4;},
+            0xB4 => {self.registers.a|=self.registers.h; self.registers.reset_flags(); if self.registers.a==0x0 {self.registers.set_z();}self.cycle=4;},
+            0xB5 => {self.registers.a|=self.registers.l; self.registers.reset_flags(); if self.registers.a==0x0 {self.registers.set_z();}self.cycle=4;},
+            0xB6 => {self.registers.a|=self.memory.get_addr(self.registers.get_hl()); self.registers.reset_flags(); if self.registers.a==0x0 {self.registers.set_z();}self.cycle=8;},
+            0xF6 => {self.registers.pc+=1; self.registers.a|=self.memory.get_addr(self.registers.pc); self.registers.reset_flags(); if self.registers.a==0x0 {self.registers.set_z();}self.cycle=8;},
             //XOR
-            0xAF => {self.registers.a^=self.registers.a; self.registers.f=0x0; if self.registers.a==0x0 {self.registers.set_z();}self.cycle=4;},
-            0xA8 => {self.registers.a^=self.registers.b; self.registers.f=0x0; if self.registers.a==0x0 {self.registers.set_z();}self.cycle=4;},
-            0xA9 => {self.registers.a^=self.registers.c; self.registers.f=0x0; if self.registers.a==0x0 {self.registers.set_z();}self.cycle=4;},
-            0xAA => {self.registers.a^=self.registers.d; self.registers.f=0x0; if self.registers.a==0x0 {self.registers.set_z();}self.cycle=4;},
-            0xAB => {self.registers.a^=self.registers.e; self.registers.f=0x0; if self.registers.a==0x0 {self.registers.set_z();}self.cycle=4;},
-            0xAC => {self.registers.a^=self.registers.h; self.registers.f=0x0; if self.registers.a==0x0 {self.registers.set_z();}self.cycle=4;},
-            0xAD => {self.registers.a^=self.registers.l; self.registers.f=0x0; if self.registers.a==0x0 {self.registers.set_z();}self.cycle=4;},
-            0xAE => {self.registers.a^=self.memory.get_addr(self.registers.get_hl()); self.registers.f=0x0; if self.registers.a==0x0 {self.registers.set_z();}self.cycle=8;},
-            0xEE => {self.registers.pc+=1; self.registers.a^=self.memory.get_addr(self.registers.pc); self.registers.f=0x0; if self.registers.a==0x0 {self.registers.set_z();}self.cycle=8;},
+            0xAF => {self.registers.a^=self.registers.a; self.registers.reset_flags(); if self.registers.a==0x0 {self.registers.set_z();}self.cycle=4;},
+            0xA8 => {self.registers.a^=self.registers.b; self.registers.reset_flags(); if self.registers.a==0x0 {self.registers.set_z();}self.cycle=4;},
+            0xA9 => {self.registers.a^=self.registers.c; self.registers.reset_flags(); if self.registers.a==0x0 {self.registers.set_z();}self.cycle=4;},
+            0xAA => {self.registers.a^=self.registers.d; self.registers.reset_flags(); if self.registers.a==0x0 {self.registers.set_z();}self.cycle=4;},
+            0xAB => {self.registers.a^=self.registers.e; self.registers.reset_flags(); if self.registers.a==0x0 {self.registers.set_z();}self.cycle=4;},
+            0xAC => {self.registers.a^=self.registers.h; self.registers.reset_flags(); if self.registers.a==0x0 {self.registers.set_z();}self.cycle=4;},
+            0xAD => {self.registers.a^=self.registers.l; self.registers.reset_flags(); if self.registers.a==0x0 {self.registers.set_z();}self.cycle=4;},
+            0xAE => {self.registers.a^=self.memory.get_addr(self.registers.get_hl()); self.registers.reset_flags(); if self.registers.a==0x0 {self.registers.set_z();}self.cycle=8;},
+            0xEE => {self.registers.pc+=1; self.registers.a^=self.memory.get_addr(self.registers.pc); self.registers.reset_flags(); if self.registers.a==0x0 {self.registers.set_z();}self.cycle=8;},
             //CP
             0xBF => { self.sub8(self.registers.a,self.registers.a,false); self.cycle=4; },
             0xB8 => { self.sub8(self.registers.a,self.registers.b,false); self.cycle=4; },
@@ -384,21 +388,21 @@ impl CPU for GumBoi{
                 match opcode_cb{
                     //RL C [] (check)
                     0x11 => { 
-                        self.registers.reset(); 
+                        self.registers.reset_flags(); 
                         self.registers.c = self.registers.c.rotate_left(1);
                         if self.registers.c == 0x0 { self.registers.set_z(); }
                         if self.registers.c & 0x1 == 0x1 { self.registers.set_c(); }
                         self.cycle=8; 
                     }
 
-                    0x37 => { self.registers.f=0x0; self.registers.a=((self.registers.a&0x0f)<<4)|((self.registers.a&0xf0)>>4); if self.registers.a==0x0 {self.registers.set_z();} self.cycle=8; },
-                    0x30 => { self.registers.f=0x0; self.registers.b=((self.registers.b&0x0f)<<4)|((self.registers.b&0xf0)>>4); if self.registers.b==0x0 {self.registers.set_z();} self.cycle=8; },
-                    0x31 => { self.registers.f=0x0; self.registers.c=((self.registers.c&0x0f)<<4)|((self.registers.c&0xf0)>>4); if self.registers.c==0x0 {self.registers.set_z();} self.cycle=8; },
-                    0x32 => { self.registers.f=0x0; self.registers.d=((self.registers.d&0x0f)<<4)|((self.registers.d&0xf0)>>4); if self.registers.d==0x0 {self.registers.set_z();} self.cycle=8; },
-                    0x33 => { self.registers.f=0x0; self.registers.e=((self.registers.e&0x0f)<<4)|((self.registers.e&0xf0)>>4); if self.registers.e==0x0 {self.registers.set_z();} self.cycle=8; },
-                    0x34 => { self.registers.f=0x0; self.registers.h=((self.registers.h&0x0f)<<4)|((self.registers.h&0xf0)>>4); if self.registers.h==0x0 {self.registers.set_z();} self.cycle=8; },
-                    0x35 => { self.registers.f=0x0; self.registers.l=((self.registers.l&0x0f)<<4)|((self.registers.l&0xf0)>>4); if self.registers.l==0x0 {self.registers.set_z();} self.cycle=8; },
-                    0x36 => { self.registers.f=0x0; byte=self.registers.get_hl(); byte8=self.memory.get_addr(byte) ; byte8=((byte8&0x0f)<<4)|((byte8&0xf0)>>4); self.memory.set_addr(byte,byte8); if byte8==0 { self.registers.set_z(); } self.cycle=16;},
+                    0x37 => { self.registers.reset_flags(); self.registers.a=((self.registers.a&0x0f)<<4)|((self.registers.a&0xf0)>>4); if self.registers.a==0x0 {self.registers.set_z();} self.cycle=8; },
+                    0x30 => { self.registers.reset_flags(); self.registers.b=((self.registers.b&0x0f)<<4)|((self.registers.b&0xf0)>>4); if self.registers.b==0x0 {self.registers.set_z();} self.cycle=8; },
+                    0x31 => { self.registers.reset_flags(); self.registers.c=((self.registers.c&0x0f)<<4)|((self.registers.c&0xf0)>>4); if self.registers.c==0x0 {self.registers.set_z();} self.cycle=8; },
+                    0x32 => { self.registers.reset_flags(); self.registers.d=((self.registers.d&0x0f)<<4)|((self.registers.d&0xf0)>>4); if self.registers.d==0x0 {self.registers.set_z();} self.cycle=8; },
+                    0x33 => { self.registers.reset_flags(); self.registers.e=((self.registers.e&0x0f)<<4)|((self.registers.e&0xf0)>>4); if self.registers.e==0x0 {self.registers.set_z();} self.cycle=8; },
+                    0x34 => { self.registers.reset_flags(); self.registers.h=((self.registers.h&0x0f)<<4)|((self.registers.h&0xf0)>>4); if self.registers.h==0x0 {self.registers.set_z();} self.cycle=8; },
+                    0x35 => { self.registers.reset_flags(); self.registers.l=((self.registers.l&0x0f)<<4)|((self.registers.l&0xf0)>>4); if self.registers.l==0x0 {self.registers.set_z();} self.cycle=8; },
+                    0x36 => { self.registers.reset_flags(); byte=self.registers.get_hl(); byte8=self.memory.get_addr(byte) ; byte8=((byte8&0x0f)<<4)|((byte8&0xf0)>>4); self.memory.set_addr(byte,byte8); if byte8==0 { self.registers.set_z(); } self.cycle=16;},
                     //BIT 7 H [- 1 0 CP]
                     0x7C => { 
                         if (self.registers.h>>7) == 0x0 { 
@@ -501,10 +505,11 @@ impl CPU for GumBoi{
         }
         self.registers.pc+=1;
     }
+    //[Z 0 H C]
     fn add8(&mut self,a:u8,b:u8,carry:bool) -> u8{
         let mut carry_val:u8=0;
         if carry==true && (self.registers.is_set_c()) { carry_val=0x1; }
-        self.registers.f=0x0;
+        self.registers.reset_flags();
         if (a & 0x0f)+(b & 0x0f) + carry_val > 0x0f { self.registers.set_h(); }
         match a.checked_add(b){ 
             Some(x) => match x.checked_add(carry_val){ 
@@ -519,7 +524,7 @@ impl CPU for GumBoi{
     fn add16(&mut self,a:u16,b:u16,carry:bool) -> u16{
         let mut carry_val:u16=0;
         if carry==true && (self.registers.is_set_c()) { carry_val=0x1; }
-        self.registers.f=0x0;
+        self.registers.reset_flags();
         if (a & 0xff)+(b & 0xff) + carry_val > 0xff { self.registers.set_h(); }
         match a.checked_add(b){ 
             Some(x) => match x.checked_add(carry_val){ 
@@ -534,7 +539,7 @@ impl CPU for GumBoi{
     fn sub8(&mut self,a:u8,b:u8,carry:bool) -> u8{
         let mut carry_val:u8=0;
         if carry==true && (self.registers.is_set_c()) {carry_val=0x1; }
-        self.registers.f=0x0; self.registers.set_n();
+        self.registers.reset_flags(); self.registers.set_n();
         if a&0x0f < (b + carry_val)&0x0f { self.registers.set_h(); }
         if a < ((((b as u16)+(carry_val as u16)) & (0x00ff)) as u8) { self.registers.set_c(); }
         let result:u8=a.wrapping_sub(b).wrapping_sub(carry_val);
@@ -546,7 +551,7 @@ impl CPU for GumBoi{
     fn sub16(&mut self,a:u16,b:u16,carry:bool) -> u16{
         let mut carry_val:u16=0;
         if carry==true && (self.registers.is_set_c()) {println!("inside carry"); carry_val=0x1; }
-        self.registers.f=0x0; self.registers.set_n();
+        self.registers.reset_flags(); self.registers.set_n();
         if a&0xff < (b + carry_val)&0xff { self.registers.set_h(); println!("h set");}
         if a < ((((b as u32)+(carry_val as u32)) & (0x00ff)) as u16) { self.registers.set_c(); }
         let result:u16=a.wrapping_sub(b).wrapping_sub(carry_val);

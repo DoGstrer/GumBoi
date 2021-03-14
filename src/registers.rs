@@ -6,7 +6,7 @@ const SET_H:u8=0b00100000;
 const SET_C:u8=0b00010000;
 
 pub trait Flag{
-    fn reset(&mut self);
+    fn reset_flags(&mut self);
     fn set_flags(&mut self, value: u8);
     fn get_flags(&self) -> u8;
 
@@ -67,7 +67,7 @@ impl Registers{
 
 impl Flag for Registers{
 
-    fn reset(&mut self){ self.f = 0x0; }
+    fn reset_flags(&mut self){ self.f = 0x0; }
     fn set_flags(&mut self, value: u8){ self.f = value; }
     fn get_flags(&self) -> u8{ self.f }
 
