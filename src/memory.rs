@@ -30,7 +30,15 @@ impl Memory{
         }
     }
     pub fn set_addr(&mut self,addr:u16,val:u8){
-        self.bank[addr as usize]=val;
+        if addr > 0x00ff {
+            self.bank[addr as usize]=val;
+        }
+        else{
+            match self.bank[0xff50]{
+                0x0 => self.boot_rom[addr as usize]=val,
+                _ => self.bank[addr as usize]=val,
+            }
+        }
     }
 }
 
