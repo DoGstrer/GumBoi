@@ -5,6 +5,7 @@ sub8 : 37 instructions
 sub16 : 7 instructions
 */
 use super::GumBoi;
+use super::GumBoiState;
 use super::registers::Flag;
 
 pub trait CPU{
@@ -110,7 +111,7 @@ impl CPU for GumBoi{
             
             0x0A => { self.registers.a=self.memory.get_addr(self.registers.get_bc()); self.cycle=8; },
             0x1A => { self.registers.a=self.memory.get_addr(self.registers.get_de()); self.cycle=8; },
-            0xFA => { self.registers.pc+=1; byte=self.get_next_byte16(); self.registers.a=self.memory.get_addr(byte); self.cycle=16; },
+            0xFA => { byte=self.get_next_byte16(); self.registers.a=self.memory.get_addr(byte); self.cycle=16; },
             
             0x47 => { self.registers.b=self.registers.a; self.cycle=4; },
             0x4F => { self.registers.c=self.registers.a; self.cycle=4; },
@@ -143,10 +144,7 @@ impl CPU for GumBoi{
                 self.cycle=8;
             },
             0xEA => {
-                self.registers.pc+=1;
-                byte=byte|(self.memory.get_addr(self.registers.pc) as u16);
-                self.registers.pc+=1;
-                byte=byte|(self.memory.get_addr(self.registers.pc) as u16)<<8;
+                byte = self.get_next_byte16();
                 self.memory.set_addr(byte,self.registers.a);
                 self.cycle=16;
             },
@@ -190,34 +188,22 @@ impl CPU for GumBoi{
             
             //16 bit LD
             0x01 => {
-                self.registers.pc+=1;
-                byte=byte|(self.memory.get_addr(self.registers.pc) as u16);
-                self.registers.pc+=1;
-                byte=byte|(self.memory.get_addr(self.registers.pc) as u16)<<8;
+                byte = self.get_next_byte16();
                 self.registers.set_bc(byte);
                 self.cycle=12;
             },
             0x11 => {
-                self.registers.pc+=1;
-                byte=byte|(self.memory.get_addr(self.registers.pc) as u16);
-                self.registers.pc+=1;
-                byte=byte|(self.memory.get_addr(self.registers.pc) as u16)<<8;
+                byte = self.get_next_byte16();
                 self.registers.set_de(byte);
                 self.cycle=12;
             },
             0x21 => {
-                self.registers.pc+=1;
-                byte=byte|(self.memory.get_addr(self.registers.pc) as u16);
-                self.registers.pc+=1;
-                byte=byte|(self.memory.get_addr(self.registers.pc) as u16)<<8;
+                byte = self.get_next_byte16();
                 self.registers.set_hl(byte);
                 self.cycle=12;
             },
             0x31 => {
-                self.registers.pc+=1;
-                byte=byte|(self.memory.get_addr(self.registers.pc) as u16);
-                self.registers.pc+=1;
-                byte=byte|(self.memory.get_addr(self.registers.pc) as u16)<<8;
+                byte = self.get_next_byte16();
                 self.registers.sp=byte;
                 self.cycle=12;
             },
@@ -235,8 +221,7 @@ impl CPU for GumBoi{
             
             //To be reviewed
             0x08 => {
-                self.registers.pc+=1; byte=byte|(self.memory.get_addr(self.registers.pc) as u16);
-                self.registers.pc+=1; byte=byte|(self.memory.get_addr(self.registers.pc) as u16)<<8;
+                byte = self.get_next_byte16();
                 self.memory.set_addr(byte,(self.registers.sp&0x00ff) as u8); 
                 self.memory.set_addr(byte+1,(self.registers.sp>>8) as u8);
                 self.cycle=20;
@@ -321,7 +306,7 @@ impl CPU for GumBoi{
             0xB4 => {self.registers.a|=self.registers.h; self.registers.reset_flags(); if self.registers.a==0x0 {self.registers.set_z();}self.cycle=4;},
             0xB5 => {self.registers.a|=self.registers.l; self.registers.reset_flags(); if self.registers.a==0x0 {self.registers.set_z();}self.cycle=4;},
             0xB6 => {self.registers.a|=self.memory.get_addr(self.registers.get_hl()); self.registers.reset_flags(); if self.registers.a==0x0 {self.registers.set_z();}self.cycle=8;},
-            0xF6 => {self.registers.pc+=1; self.registers.a|=self.memory.get_addr(self.registers.pc); self.registers.reset_flags(); if self.registers.a==0x0 {self.registers.set_z();}self.cycle=8;},
+            0xF6 => {byte8 = self.get_next_byte8(); self.registers.a |= byte8; self.registers.reset_flags(); if self.registers.a==0x0 {self.registers.set_z();}self.cycle=8;},
             
             //XOR
             0xAF => {self.registers.a^=self.registers.a; self.registers.reset_flags(); if self.registers.a==0x0 {self.registers.set_z();}self.cycle=4;},
@@ -343,7 +328,7 @@ impl CPU for GumBoi{
             0xBC => { self.sub8(self.registers.a,self.registers.h,false); self.cycle=4; },
             0xBD => { self.sub8(self.registers.a,self.registers.l,false); self.cycle=4; },
             0xBE => { self.sub8(self.registers.a,self.memory.get_addr(self.registers.get_hl()),false); self.cycle=8; },
-            0xFE => { byte = self.get_next_byte8() as u16; self.sub8(self.registers.a,byte as u8,false); self.cycle=8; },
+            0xFE => { byte8 = self.get_next_byte8(); self.sub8(self.registers.a,byte8 as u8,false); self.cycle=8; },
             
             //INC
             // INC A [- * 0 *]
@@ -391,9 +376,7 @@ impl CPU for GumBoi{
             //MISCELLANEOUS
             //SWAP 
             0xCB => {
-                self.registers.pc+=1;
-                opcode_cb=self.memory.get_addr(self.registers.pc);
-
+                opcode_cb=self.get_next_byte8();
                 match opcode_cb{
                     //RL C [] (check)
                     0x11 => { 
@@ -411,6 +394,7 @@ impl CPU for GumBoi{
                     0x33 => { self.registers.reset_flags(); self.registers.e=((self.registers.e&0x0f)<<4)|((self.registers.e&0xf0)>>4); if self.registers.e==0x0 {self.registers.set_z();} self.cycle=8; },
                     0x34 => { self.registers.reset_flags(); self.registers.h=((self.registers.h&0x0f)<<4)|((self.registers.h&0xf0)>>4); if self.registers.h==0x0 {self.registers.set_z();} self.cycle=8; },
                     0x35 => { self.registers.reset_flags(); self.registers.l=((self.registers.l&0x0f)<<4)|((self.registers.l&0xf0)>>4); if self.registers.l==0x0 {self.registers.set_z();} self.cycle=8; },
+                    //CHECK
                     0x36 => { self.registers.reset_flags(); byte=self.registers.get_hl(); byte8=self.memory.get_addr(byte) ; byte8=((byte8&0x0f)<<4)|((byte8&0xf0)>>4); self.memory.set_addr(byte,byte8); if byte8==0 { self.registers.set_z(); } self.cycle=16;},
                     //BIT 7 H [- 1 0 CP]
                     0x7C => { 
@@ -434,13 +418,10 @@ impl CPU for GumBoi{
             //NOP (there just for formality)
             0x00 => { self.cycle=4; },
             //HALT
-            0x76 => {},
+            0x76 => { self.state = GumBoiState::Halt; self.cycle = 4; return; },
             //JP NN (check)
             0xC3 => {
-                self.registers.pc+=1;
-                byte=byte|(self.memory.get_addr(self.registers.pc) as u16);
-                self.registers.pc+=1;
-                byte=byte|(self.memory.get_addr(self.registers.pc) as u16)<<8;
+                byte = self.get_next_byte16();
                 self.registers.pc=byte; 
                 self.cycle=16; 
             }
@@ -483,8 +464,7 @@ impl CPU for GumBoi{
             0xCD => {
                 self.registers.sp-=1; self.memory.set_addr(self.registers.sp,((self.registers.pc & 0xff00) >> 8) as u8);
                 self.registers.sp-=1; self.memory.set_addr(self.registers.sp,(self.registers.pc & 0x00ff) as u8);
-                self.registers.pc+=1; byte=byte|(self.memory.get_addr(self.registers.pc) as u16);
-                self.registers.pc+=1; byte=byte|(self.memory.get_addr(self.registers.pc) as u16) << 8;
+                byte = self.get_next_byte16();
                 self.registers.pc = byte;
                 self.cycle = 24;
             }
@@ -508,7 +488,7 @@ impl CPU for GumBoi{
             //TO REMOVE | FOR TESTING PURPOSE ONLY | ALTERNATIVE UNTIL INTERRUPT IS SETUP
             0xFF => {
                 println!("Changing state");
-                self.state = 0;
+                self.state = GumBoiState::Exit;
             }
             _ => (panic!("Opcode missing in CPU : {:#0x?}",opcode))
         }
