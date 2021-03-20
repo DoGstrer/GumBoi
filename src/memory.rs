@@ -3,19 +3,29 @@ Arrays cannot be indexed with u16/u8 etc types which are dependednt on underlyin
  RUST DEF : fixed-size array, denoted [T; N], for the element type, T, and the non-negative compile-time constant size, N.
 */
 
+const BOOT_ROM_SIZE: usize = 0x100;
+const CATRIDGE_ROM_SIZE: usize = 0x8000;
+const VRAM_SIZE: usize = 0x2000;
+const EXTERNAL_RAM_SIZE: usize = 0x2000;
+const RAM_SIZE: usize = 0x2000;
+const HRAM: usize = 0x7F;
+const OAM_RAM: usize = 0xA0;
+
 use std::fmt;
 
 #[derive(PartialEq)]
 pub struct Memory{
     bank: [u8;65536],
-    pub boot_rom: [u8;256],
+    pub boot_rom: [u8;BOOT_ROM_SIZE],
+    catridge_rom: [u8;CATRIDGE_ROM_SIZE],
 }
 
 impl Memory{
     pub fn new() -> Memory{
         Memory{
             bank:[0u8;65536],
-            boot_rom: [0u8;256],
+            boot_rom: [0u8;BOOT_ROM_SIZE],
+            catridge_rom: [0u8;CATRIDGE_ROM_SIZE],
         }
     }
     pub fn get_addr(&self,addr:u16) -> u8{
