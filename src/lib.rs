@@ -10,10 +10,14 @@ mod timer;
 mod interrupt;
 
 use cpu::CPU;
+use ppu::PPU;
 use memory::Memory;
 use registers::Registers;
 use registers::Flag;
+
 use std::convert::TryInto;
+use std::rc::Rc;
+use std::cell::RefCell;
 
 #[derive(PartialEq,Debug)]
 enum GumBoiState{
@@ -22,38 +26,42 @@ enum GumBoiState{
     Exit,
 }
 
-#[derive(PartialEq,Debug)]
 pub struct GumBoi{
-    memory: Memory,
-    registers: Registers,
+    cpu: CPU,
+    //ppu: PPU,
+    memory: Rc<RefCell<Memory>>,
     cycle: usize,
     state: GumBoiState,
 }
 
 impl GumBoi{
     pub fn new() -> GumBoi{
+        let memory = Rc::new(RefCell::new(Memory::new()));
+        let memory_cpu = Rc::clone(&memory);
+        //let memory_ppu = Rc::clone(&memory);
+
         GumBoi{
-            memory: Memory::new(),
-            registers: Registers::new(),
-            cycle: 0,
+            cpu: CPU::new(memory_cpu),
+            //ppu: PPU::new(memory_ppu),
+            memory: memory,
             state: GumBoiState::Active,
+            cycle: 0,
         }
     }
     pub fn load(&mut self,boot_rom: Vec<u8>,catridge_rom: Vec<u8>){
         //Load Boot ROM into GumBoi
-        self.memory.boot_rom = boot_rom[..].try_into().expect("Boot ROM exceeds 256 bytes!");
+        self.memory.borrow_mut().boot_rom = boot_rom[..].try_into().expect("Boot ROM exceeds 256 bytes!");
         //Load Catridge into GumBoi ROM
         let mut addr: u16 = 0x0000;
         for byte in catridge_rom{
-            self.memory.set_addr(addr,byte);
+            self.memory.borrow_mut().set_addr(addr,byte);
             addr+=1;
         }
     }
     pub fn start(&mut self){
         //self.memory.set_addr(0xff44,0x90);
         while self.state == GumBoiState::Active{
-            println!("{:?}",self);
-            self.execute();
+            self.cpu.execute();
         }
     }
     pub fn exit(&self){
@@ -65,10 +73,14 @@ impl GumBoi{
 #[cfg(test)]
 mod alu_intruction_tests{
 
+    use std::cell::RefCell;
+    use std::rc::Rc;
+
     use super::Registers;
     use super::GumBoi;
     use super::GumBoiState;
     use super::cpu::CPU;
+    use super::cpu::CPUState;
     use super::memory::Memory;
     use std::convert::TryInto;
     
@@ -136,15 +148,22 @@ mod alu_intruction_tests{
     const empty_registers: Registers = Registers{a:0x0,b:0x0,c:0x0,d:0x0,e:0x0,f:0x0,h:0x0,l:0x0,sp:0x0,pc:0x0};
 
     fn get_next_state(current_state: (Registers,Memory,usize)) -> (Registers,Memory,usize){
+        let memory = Rc::new(RefCell::new(Memory::new()));
+        let memory1 = Rc::clone(&memory);
         let mut gb: GumBoi = GumBoi{
-            registers: current_state.0,
-            memory: current_state.1,
-            cycle: current_state.2,
+            cpu: CPU{
+                registers: current_state.0,
+                memory: memory,
+                cycle: current_state.2,
+                state: CPUState::Active,
+            },
+            memory: memory,
+            cycle: 0,
             state: GumBoiState::Active,
         };
-        gb.start();    
-        gb.registers.pc-=1;
-        (gb.registers,gb.memory,gb.cycle)
+        let mem = memory1.into_inner();
+        drop(gb);
+        (gb.get_registers(),mem,gb.cycle)
     }
 
     test_case![OxFF|

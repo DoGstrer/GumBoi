@@ -16,6 +16,10 @@ CALL B6 FF at 0x6D FOR Super Mario
 */
 
 use super::GumBoi;
+use super::Memory;
+
+use std::cell::RefCell;
+use std::rc::Rc;
 
 const LCDC:u16 = 0xFF40;
 
@@ -26,12 +30,19 @@ enum PPUModes{
     VBLANK,//PPU Does nothing | Takes place at the end of every frame
 }
 
-struct Registers{
-
-}
-
-struct PPU{
+pub struct PPU{
     buffer: [u8;16],
     mode: PPUModes,
-    vram: [u8;8192],
+    memory: Rc<RefCell<Memory>>,
 }
+
+impl PPU{
+    pub fn new(memory: Rc<RefCell<Memory>>) -> PPU{
+        PPU{
+            buffer: [0u8;16],
+            mode: PPUModes::OAMSCAN,
+            memory: memory,
+        }
+    }
+}
+
