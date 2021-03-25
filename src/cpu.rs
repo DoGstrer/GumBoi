@@ -7,12 +7,11 @@ sub16 : 7 instructions
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use super::GumBoi;
-use super::GumBoiState;
 use super::registers::Flag;
 use super::registers::Registers;
 use super::memory::Memory;
 
+#[derive(PartialEq,Debug,Copy,Clone)]
 pub enum CPUState{
     Halt,
     Stop,
@@ -21,10 +20,10 @@ pub enum CPUState{
 }
 
 pub struct CPU{
-    registers: Registers,
-    memory: Rc<RefCell<Memory>>,
-    cycle: usize,
-    state: CPUState,
+    pub registers: Registers,
+    pub memory: Rc<RefCell<Memory>>,
+    pub cycle: usize,
+    pub state: CPUState,
 }
 
 impl CPU{
@@ -50,6 +49,7 @@ impl CPU{
     }
     pub fn execute(&mut self){
         let opcode:u8 = self.memory.borrow().get_addr(self.registers.pc);
+        println!("{:#x?}",opcode);
         let mut opcode_cb:u8=0x0;
         let mut byte:u16=0x0;
         let mut byte8:u8=0x0;
@@ -469,9 +469,12 @@ impl CPU{
             // JR i8 [- - - -]
             0x18 => {
                 let flag = self.registers.get_flags();
-                let byte = self.get_next_byte8() as i8; 
-                if byte.is_negative() { self.registers.pc = self.sub16(self.registers.pc,byte.abs() as u16,false) } 
-                else { self.registers.pc = self.add16(self.registers.pc,byte as u16,false); }
+                let byte8 = self.get_next_byte8() as i8; 
+                if byte8.is_negative() { 
+                    self.registers.pc = self.sub16(self.registers.pc,byte8.abs() as u16,false); 
+                } else { 
+                    self.registers.pc = self.add16(self.registers.pc,byte8 as u16,false); 
+                }
                 self.registers.set_flags(flag);    
                 self.cycle = 12;
             }
@@ -504,10 +507,12 @@ impl CPU{
             0xFF => {
                 println!("Changing state");
                 self.state = CPUState::Exit;
+                return
             }
             _ => (panic!("Opcode missing in CPU : {:#0x?}",opcode))
         }
         self.registers.pc+=1;
+        println!("{}",self.registers.pc);
     }
     //[Z 0 H C]
     fn add8(&mut self,a:u8,b:u8,carry:bool) -> u8{
@@ -590,6 +595,15 @@ impl CPU{
     }
     fn print_flags(&self){
         println!("Z:{} N:{} H:{} C:{}",self.registers.get_z(),self.registers.get_n(),self.registers.get_h(),self.registers.get_c());
+    }
+    pub fn get_registers(&self) -> Registers{
+        self.registers
+    }
+    pub fn get_cycles(&self) -> usize{
+        self.cycle
+    }
+    pub fn get_state(&self) -> CPUState{
+        self.state
     }
 }
 

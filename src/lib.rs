@@ -10,6 +10,7 @@ mod timer;
 mod interrupt;
 
 use cpu::CPU;
+use cpu::CPUState;
 use ppu::PPU;
 use memory::Memory;
 use registers::Registers;
@@ -28,7 +29,7 @@ enum GumBoiState{
 
 pub struct GumBoi{
     cpu: CPU,
-    //ppu: PPU,
+    ppu: PPU,
     memory: Rc<RefCell<Memory>>,
     cycle: usize,
     state: GumBoiState,
@@ -38,11 +39,11 @@ impl GumBoi{
     pub fn new() -> GumBoi{
         let memory = Rc::new(RefCell::new(Memory::new()));
         let memory_cpu = Rc::clone(&memory);
-        //let memory_ppu = Rc::clone(&memory);
+        let memory_ppu = Rc::clone(&memory);
 
         GumBoi{
             cpu: CPU::new(memory_cpu),
-            //ppu: PPU::new(memory_ppu),
+            ppu: PPU::new(memory_ppu),
             memory: memory,
             state: GumBoiState::Active,
             cycle: 0,
@@ -60,7 +61,7 @@ impl GumBoi{
     }
     pub fn start(&mut self){
         //self.memory.set_addr(0xff44,0x90);
-        while self.state == GumBoiState::Active{
+        while self.cpu.get_state() == CPUState::Active{
             self.cpu.execute();
         }
     }
@@ -79,11 +80,12 @@ mod alu_intruction_tests{
     use super::Registers;
     use super::GumBoi;
     use super::GumBoiState;
+    use super::ppu::PPU;
     use super::cpu::CPU;
     use super::cpu::CPUState;
     use super::memory::Memory;
     use std::convert::TryInto;
-    
+
     macro_rules! arr_u8{
         ( $size:expr,[$($x:expr),*] ) => {
             {
@@ -148,22 +150,25 @@ mod alu_intruction_tests{
     const empty_registers: Registers = Registers{a:0x0,b:0x0,c:0x0,d:0x0,e:0x0,f:0x0,h:0x0,l:0x0,sp:0x0,pc:0x0};
 
     fn get_next_state(current_state: (Registers,Memory,usize)) -> (Registers,Memory,usize){
-        let memory = Rc::new(RefCell::new(Memory::new()));
-        let memory1 = Rc::clone(&memory);
-        let mut gb: GumBoi = GumBoi{
+        let memory = Rc::new(RefCell::new(current_state.1));
+        let memory_cpu = Rc::clone(&memory);
+        let memory_ppu = Rc::clone(&memory);
+        let memory_1 = Rc::clone(&memory);
+        let mut gb = GumBoi{
             cpu: CPU{
                 registers: current_state.0,
                 memory: memory,
                 cycle: current_state.2,
                 state: CPUState::Active,
             },
-            memory: memory,
+            ppu: PPU::new(memory_ppu),
+            memory: memory_cpu,
             cycle: 0,
             state: GumBoiState::Active,
         };
-        let mem = memory1.into_inner();
-        drop(gb);
-        (gb.get_registers(),mem,gb.cycle)
+        gb.start();
+        let mem = *memory_1.borrow();
+        (gb.cpu.get_registers(),mem,gb.cpu.get_cycles())
     }
 
     test_case![OxFF|

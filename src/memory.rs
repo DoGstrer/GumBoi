@@ -13,7 +13,7 @@ const OAM_RAM: usize = 0xA0;
 
 use std::fmt;
 
-#[derive(PartialEq)]
+#[derive(PartialEq,Copy,Clone)]
 pub struct Memory{
     bank: [u8;65536],
     pub boot_rom: [u8;BOOT_ROM_SIZE],

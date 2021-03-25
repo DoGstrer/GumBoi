@@ -31,7 +31,7 @@ pub trait Flag{
     fn is_set_c(&self) -> bool;
 }
 
-#[derive(Debug,PartialEq,Default)]
+#[derive(Debug,PartialEq,Default,Copy,Clone)]
 pub struct Registers{
     pub a:u8,
     pub b:u8,
