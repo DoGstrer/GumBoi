@@ -44,5 +44,6 @@ impl PPU{
             memory: memory,
         }
     }
+    fn start(){}
 }
 
