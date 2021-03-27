@@ -36,7 +36,6 @@ use std::fmt;
 pub struct Memory {
     bank: [u8; 65536],
     boot_rom: [u8; BOOT_ROM_SIZE],
-    catridge_rom: [u8; CATRIDGE_ROM_SIZE],
 }
 
 impl Memory {
@@ -44,7 +43,6 @@ impl Memory {
         Memory {
             bank: [0u8; 65536],
             boot_rom: BOOT_ROM,
-            catridge_rom: [0u8; CATRIDGE_ROM_SIZE],
         }
     }
     pub fn get_addr(&self, addr: u16) -> u8 {
@@ -66,6 +64,17 @@ impl Memory {
                 _ => self.bank[addr as usize] = val,
             }
         }
+    }
+    //TODO : Better API
+    pub fn load_cartridge(&mut self,cartridge_rom: Vec<u8>){
+        match cartridge_rom{
+            cartridge_rom if cartridge_rom.len() < 0x8000 => {
+                for (index,val) in cartridge_rom.iter().enumerate(){
+                    self.bank[index] = *val;
+                }
+            },
+            _ => panic!("Inserted Cartridge Exceeds 32Kb!")
+        };
     }
 }
 

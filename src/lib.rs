@@ -49,13 +49,9 @@ impl GumBoi {
             cycle: 0,
         }
     }
-    pub fn load(&mut self, catridge_rom: Vec<u8>) {
+    pub fn insert_cartridge(&mut self, cartridge_rom: Vec<u8>) {
         //Load Catridge into GumBoi ROM
-        let mut addr: u16 = 0x0000;
-        for byte in catridge_rom {
-            self.memory.borrow_mut().set_addr(addr, byte);
-            addr += 1;
-        }
+        self.memory.try_borrow_mut().unwrap().load_cartridge(cartridge_rom);
     }
     pub fn start(&mut self) {
         //self.memory.set_addr(0xff44,0x90);

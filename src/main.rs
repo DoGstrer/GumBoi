@@ -16,7 +16,7 @@ fn main() {
     let catridge_rom: Vec<u8> = read_bin(catridge_rom_file_loc);
 
     let mut gumboi = GumBoi::new();
-    gumboi.load(catridge_rom);
+    gumboi.insert_cartridge(catridge_rom);
     gumboi.start();
     gumboi.exit();
 }

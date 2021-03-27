@@ -49,7 +49,7 @@ impl CPU {
     }
     pub fn execute(&mut self) {
         let opcode: u8 = self.memory.borrow().get_addr(self.registers.pc);
-        println!("{:#x?}", opcode);
+        //println!("{:#x?}", opcode);
         let mut opcode_cb: u8 = 0x0;
         let mut byte: u16 = 0x0;
         let mut byte8: u8 = 0x0;
@@ -1537,7 +1537,6 @@ impl CPU {
             _ => (panic!("Opcode missing in CPU : {:#0x?}", opcode)),
         }
         self.registers.pc += 1;
-        println!("{}", self.registers.pc);
     }
     //[Z 0 H C]
     fn add8(&mut self, a: u8, b: u8, carry: bool) -> u8 {
