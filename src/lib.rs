@@ -49,11 +49,7 @@ impl GumBoi {
             cycle: 0,
         }
     }
-    pub fn load(&mut self, boot_rom: Vec<u8>, catridge_rom: Vec<u8>) {
-        //Load Boot ROM into GumBoi
-        self.memory.borrow_mut().boot_rom = boot_rom[..]
-            .try_into()
-            .expect("Boot ROM exceeds 256 bytes!");
+    pub fn load(&mut self, catridge_rom: Vec<u8>) {
         //Load Catridge into GumBoi ROM
         let mut addr: u16 = 0x0000;
         for byte in catridge_rom {

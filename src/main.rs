@@ -12,14 +12,11 @@ use std::fs;
 use gumboi::GumBoi;
 
 fn main() {
-    let dmg_rom_file_loc: String = env::args().nth(1).unwrap();
-    let catridge_rom_file_loc: String = env::args().nth(2).unwrap();
-
-    let dmg_rom: Vec<u8> = read_bin(dmg_rom_file_loc);
+    let catridge_rom_file_loc: String = env::args().nth(1).unwrap();
     let catridge_rom: Vec<u8> = read_bin(catridge_rom_file_loc);
 
     let mut gumboi = GumBoi::new();
-    gumboi.load(dmg_rom, catridge_rom);
+    gumboi.load(catridge_rom);
     gumboi.start();
     gumboi.exit();
 }
