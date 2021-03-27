@@ -88,7 +88,7 @@ mod alu_intruction_tests {
     use super::Registers;
     use std::convert::TryInto;
 
-    macro_rules! arr_u8{
+    macro_rules! arr_u8 {
         ( $size:expr,[$($x:expr),*] ) => {
             {
                 let mut temp_a = Vec::new();
@@ -105,7 +105,7 @@ mod alu_intruction_tests {
         };
     }
 
-    macro_rules! registers{
+    macro_rules! registers {
         ($($register_name:ident:$register_value:expr),*) => {
             {
                 Registers{
@@ -118,7 +118,7 @@ mod alu_intruction_tests {
         }
     }
 
-    macro_rules! memory{
+    macro_rules! memory {
         ($($addr:expr=>$value:expr),*) => {
             {
                 let mut mem = Memory::new();
