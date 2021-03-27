@@ -1,10 +1,9 @@
 use super::GumBoi;
 
-trait Sound{
+trait Sound {
     //TODO
 }
 
-impl Sound for GumBoi{
+impl Sound for GumBoi {
     //TODO
 }
-

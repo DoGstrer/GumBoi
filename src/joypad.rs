@@ -1,9 +1,9 @@
 use super::GumBoi;
 
-trait JoyPad{
+trait JoyPad {
     //TODO
 }
 
-impl JoyPad for GumBoi{
+impl JoyPad for GumBoi {
     //TODO
 }

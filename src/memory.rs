@@ -13,47 +13,45 @@ const OAM_RAM: usize = 0xA0;
 
 use std::fmt;
 
-#[derive(PartialEq,Copy,Clone)]
-pub struct Memory{
-    bank: [u8;65536],
-    pub boot_rom: [u8;BOOT_ROM_SIZE],
-    catridge_rom: [u8;CATRIDGE_ROM_SIZE],
+#[derive(PartialEq, Copy, Clone)]
+pub struct Memory {
+    bank: [u8; 65536],
+    pub boot_rom: [u8; BOOT_ROM_SIZE],
+    catridge_rom: [u8; CATRIDGE_ROM_SIZE],
 }
 
-impl Memory{
-    pub fn new() -> Memory{
-        Memory{
-            bank:[0u8;65536],
-            boot_rom: [0u8;BOOT_ROM_SIZE],
-            catridge_rom: [0u8;CATRIDGE_ROM_SIZE],
+impl Memory {
+    pub fn new() -> Memory {
+        Memory {
+            bank: [0u8; 65536],
+            boot_rom: [0u8; BOOT_ROM_SIZE],
+            catridge_rom: [0u8; CATRIDGE_ROM_SIZE],
         }
     }
-    pub fn get_addr(&self,addr:u16) -> u8{
+    pub fn get_addr(&self, addr: u16) -> u8 {
         if addr > 0x00ff {
             self.bank[addr as usize]
-        }
-        else{
-            match self.bank[0xff50]{
+        } else {
+            match self.bank[0xff50] {
                 0x0 => self.boot_rom[addr as usize],
-                _ => self.bank[addr as usize]
+                _ => self.bank[addr as usize],
             }
         }
     }
-    pub fn set_addr(&mut self,addr:u16,val:u8){
+    pub fn set_addr(&mut self, addr: u16, val: u8) {
         if addr > 0x00ff {
-            self.bank[addr as usize]=val;
-        }
-        else{
-            match self.bank[0xff50]{
-                0x0 => self.boot_rom[addr as usize]=val,
-                _ => self.bank[addr as usize]=val,
+            self.bank[addr as usize] = val;
+        } else {
+            match self.bank[0xff50] {
+                0x0 => self.boot_rom[addr as usize] = val,
+                _ => self.bank[addr as usize] = val,
             }
         }
     }
 }
 
-impl fmt::Debug for Memory{
-    fn fmt(&self,f: &mut fmt::Formatter<'_>) -> fmt::Result{
-        write!(f,"")
+impl fmt::Debug for Memory {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "")
     }
 }

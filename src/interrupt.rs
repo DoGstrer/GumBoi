@@ -1,9 +1,9 @@
 use super::GumBoi;
 
-trait Interrupt{
+trait Interrupt {
     //TODO
 }
 
-impl Interrupt for GumBoi{
+impl Interrupt for GumBoi {
     //TODO
 }

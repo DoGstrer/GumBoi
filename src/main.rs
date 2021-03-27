@@ -5,13 +5,13 @@ mapping between file system to module tree*/
 
 #![allow(unused)]
 
-use std::fs;
-use std::env;
 use std::convert::TryInto;
+use std::env;
+use std::fs;
 
 use gumboi::GumBoi;
 
-fn main(){
+fn main() {
     let dmg_rom_file_loc: String = env::args().nth(1).unwrap();
     let catridge_rom_file_loc: String = env::args().nth(2).unwrap();
 
@@ -19,13 +19,12 @@ fn main(){
     let catridge_rom: Vec<u8> = read_bin(catridge_rom_file_loc);
 
     let mut gumboi = GumBoi::new();
-    gumboi.load(dmg_rom,catridge_rom);
+    gumboi.load(dmg_rom, catridge_rom);
     gumboi.start();
     gumboi.exit();
-    
 }
 
-fn read_bin(file_name: String) -> Vec<u8>{
+fn read_bin(file_name: String) -> Vec<u8> {
     let binary = fs::read(file_name).unwrap();
     binary
 }

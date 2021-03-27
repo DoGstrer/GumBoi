@@ -1,9 +1,9 @@
 use super::GumBoi;
 
-trait Timer{
+trait Timer {
     //TODO
 }
 
-impl Timer for GumBoi{
+impl Timer for GumBoi {
     //TODO
 }
