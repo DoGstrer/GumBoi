@@ -112,7 +112,7 @@ mod alu_intruction_tests {
                     $(
                         $register_name: $register_value,
                     )*
-                    ..empty_registers
+                    ..EMPTY_REGISTERS
                 }
             }
         }
@@ -149,7 +149,7 @@ mod alu_intruction_tests {
     const RESET_H: u8 = 0b11011111;
     const RESET_C: u8 = 0b11101111;
 
-    const empty_registers: Registers = Registers {
+    const EMPTY_REGISTERS: Registers = Registers {
         a: 0x0,
         b: 0x0,
         c: 0x0,
