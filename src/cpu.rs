@@ -4,8 +4,7 @@ add16 : 12 instructions
 sub8 : 37 instructions
 sub16 : 7 instructions
 */
-use std::cell::RefCell;
-use std::rc::Rc;
+use std::sync::{Mutex,Arc};
 
 use super::memory::Memory;
 use super::registers::Flag;
@@ -21,13 +20,13 @@ pub enum CPUState {
 
 pub struct CPU {
     pub registers: Registers,
-    pub memory: Rc<RefCell<Memory>>,
+    pub memory: Arc<Mutex<Memory>>,
     pub cycle: usize,
     pub state: CPUState,
 }
 
 impl CPU {
-    pub fn new(memory: Rc<RefCell<Memory>>) -> CPU {
+    pub fn new(memory: Arc<Mutex<Memory>>) -> CPU {
         CPU {
             registers: Registers::new(),
             cycle: 0,
@@ -36,20 +35,20 @@ impl CPU {
         }
     }
     fn get_next_byte8(&mut self) -> u8 {
-        let mut byte:u8 = self.memory.borrow().get_addr(self.registers.pc);
+        let mut byte:u8 = self.memory.lock().unwrap().get_addr(self.registers.pc);
         self.registers.pc += 1;
         byte
     }
     fn get_next_byte16(&mut self) -> u16 {
         let mut byte: u16;
-        byte = self.memory.borrow().get_addr(self.registers.pc) as u16;
+        byte = self.memory.lock().unwrap().get_addr(self.registers.pc) as u16;
         self.registers.pc += 1;
-        byte |= (self.memory.borrow().get_addr(self.registers.pc) as u16) << 8;
+        byte |= (self.memory.lock().unwrap().get_addr(self.registers.pc) as u16) << 8;
         self.registers.pc += 1;
         byte
     }
     pub fn execute(&mut self) {
-        let opcode: u8 = self.memory.borrow().get_addr(self.registers.pc);
+        let opcode: u8 = self.memory.lock().unwrap().get_addr(self.registers.pc);
         //println!("{:#x?}", opcode);
         let mut opcode_cb: u8 = 0x0;
         let mut byte: u16 = 0x0;
@@ -91,7 +90,8 @@ impl CPU {
             0x36 => {
                 byte8 = self.get_next_byte8();
                 self.memory
-                    .borrow_mut()
+                    .lock()
+                    .unwrap()
                     .set_addr(self.registers.get_hl(), byte8);
                 self.cycle = 12;
             }
@@ -125,7 +125,7 @@ impl CPU {
                 self.cycle = 4;
             }
             0x7E => {
-                self.registers.a = self.memory.borrow().get_addr(self.registers.get_hl());
+                self.registers.a = self.memory.lock().unwrap().get_addr(self.registers.get_hl());
                 self.cycle = 8;
             }
             0x40 => {
@@ -153,7 +153,7 @@ impl CPU {
                 self.cycle = 4;
             }
             0x46 => {
-                self.registers.b = self.memory.borrow().get_addr(self.registers.get_hl());
+                self.registers.b = self.memory.lock().unwrap().get_addr(self.registers.get_hl());
                 self.cycle = 8;
             }
             0x48 => {
@@ -181,7 +181,7 @@ impl CPU {
                 self.cycle = 4;
             }
             0x4E => {
-                self.registers.c = self.memory.borrow().get_addr(self.registers.get_hl());
+                self.registers.c = self.memory.lock().unwrap().get_addr(self.registers.get_hl());
                 self.cycle = 8;
             }
             0x50 => {
@@ -209,7 +209,7 @@ impl CPU {
                 self.cycle = 4;
             }
             0x56 => {
-                self.registers.d = self.memory.borrow().get_addr(self.registers.get_hl());
+                self.registers.d = self.memory.lock().unwrap().get_addr(self.registers.get_hl());
                 self.cycle = 8;
             }
             0x58 => {
@@ -237,7 +237,7 @@ impl CPU {
                 self.cycle = 4;
             }
             0x5E => {
-                self.registers.e = self.memory.borrow().get_addr(self.registers.get_hl());
+                self.registers.e = self.memory.lock().unwrap().get_addr(self.registers.get_hl());
                 self.cycle = 8;
             }
             0x60 => {
@@ -265,7 +265,7 @@ impl CPU {
                 self.cycle = 4;
             }
             0x66 => {
-                self.registers.h = self.memory.borrow().get_addr(self.registers.get_hl());
+                self.registers.h = self.memory.lock().unwrap().get_addr(self.registers.get_hl());
                 self.cycle = 8;
             }
             0x68 => {
@@ -293,57 +293,57 @@ impl CPU {
                 self.cycle = 4;
             }
             0x6E => {
-                self.registers.l = self.memory.borrow().get_addr(self.registers.get_hl());
+                self.registers.l = self.memory.lock().unwrap().get_addr(self.registers.get_hl());
                 self.cycle = 8;
             }
             0x70 => {
                 self.memory
-                    .borrow_mut()
+                    .lock().unwrap()
                     .set_addr(self.registers.get_hl(), self.registers.b);
                 self.cycle = 8;
             }
             0x71 => {
                 self.memory
-                    .borrow_mut()
+                    .lock().unwrap()
                     .set_addr(self.registers.get_hl(), self.registers.c);
                 self.cycle = 8;
             }
             0x72 => {
                 self.memory
-                    .borrow_mut()
+                    .lock().unwrap()
                     .set_addr(self.registers.get_hl(), self.registers.d);
                 self.cycle = 8;
             }
             0x73 => {
                 self.memory
-                    .borrow_mut()
+                    .lock().unwrap()
                     .set_addr(self.registers.get_hl(), self.registers.e);
                 self.cycle = 8;
             }
             0x74 => {
                 self.memory
-                    .borrow_mut()
+                    .lock().unwrap()
                     .set_addr(self.registers.get_hl(), self.registers.h);
                 self.cycle = 8;
             }
             0x75 => {
                 self.memory
-                    .borrow_mut()
+                    .lock().unwrap()
                     .set_addr(self.registers.get_hl(), self.registers.l);
                 self.cycle = 8;
             }
 
             0x0A => {
-                self.registers.a = self.memory.borrow().get_addr(self.registers.get_bc());
+                self.registers.a = self.memory.lock().unwrap().get_addr(self.registers.get_bc());
                 self.cycle = 8;
             }
             0x1A => {
-                self.registers.a = self.memory.borrow().get_addr(self.registers.get_de());
+                self.registers.a = self.memory.lock().unwrap().get_addr(self.registers.get_de());
                 self.cycle = 8;
             }
             0xFA => {
                 byte = self.get_next_byte16();
-                self.registers.a = self.memory.borrow().get_addr(byte);
+                self.registers.a = self.memory.lock().unwrap().get_addr(byte);
                 self.cycle = 16;
             }
 
@@ -373,60 +373,57 @@ impl CPU {
             }
             0x02 => {
                 self.memory
-                    .borrow_mut()
+                    .lock().unwrap()
                     .set_addr(self.registers.get_bc(), self.registers.a);
                 self.cycle = 8;
             }
             0x12 => {
                 self.memory
-                    .borrow_mut()
+                    .lock().unwrap()
                     .set_addr(self.registers.get_de(), self.registers.a);
                 self.cycle = 8;
             }
             0x77 => {
                 self.memory
-                    .borrow_mut()
+                    .lock().unwrap()
                     .set_addr(self.registers.get_hl(), self.registers.a);
                 self.cycle = 8;
             }
             0xEA => {
                 byte = self.get_next_byte16();
-                self.memory.borrow_mut().set_addr(byte, self.registers.a);
+                self.memory.lock().unwrap().set_addr(byte, self.registers.a);
                 self.cycle = 16;
             }
             0xF2 => {
-                self.registers.a = self
-                    .memory
-                    .borrow()
-                    .get_addr(0xFF00 | (self.registers.c as u16));
+                self.registers.a = self.memory.lock().unwrap().get_addr(0xFF00 | (self.registers.c as u16));
                 self.cycle = 8;
             }
             0xE2 => {
                 self.memory
-                    .borrow_mut()
+                    .lock().unwrap()
                     .set_addr(0xFF00 + (self.registers.c as u16), self.registers.a);
                 self.cycle = 8;
             }
             0x3A => {
-                self.registers.a = self.memory.borrow().get_addr(self.registers.get_hl());
+                self.registers.a = self.memory.lock().unwrap().get_addr(self.registers.get_hl());
                 self.registers.set_hl(self.registers.get_hl() - 0x1);
                 self.cycle = 8;
             }
             0x32 => {
                 self.memory
-                    .borrow_mut()
+                    .lock().unwrap()
                     .set_addr(self.registers.get_hl(), self.registers.a);
                 self.registers.set_hl(self.registers.get_hl() - 1);
                 self.cycle = 8;
             }
             0x2A => {
-                self.registers.a = self.memory.borrow().get_addr(self.registers.get_hl());
+                self.registers.a = self.memory.lock().unwrap().get_addr(self.registers.get_hl());
                 self.registers.set_hl(self.registers.get_hl() + 0x1);
                 self.cycle = 8;
             }
             0x22 => {
                 self.memory
-                    .borrow_mut()
+                    .lock().unwrap()
                     .set_addr(self.registers.get_hl(), self.registers.a);
                 self.registers.set_hl(self.registers.get_hl() + 0x0001);
                 self.cycle = 8;
@@ -434,13 +431,13 @@ impl CPU {
             0xE0 => {
                 byte8 = self.get_next_byte8();
                 self.memory
-                    .borrow_mut()
+                    .lock().unwrap()
                     .set_addr(0xFF00 + (byte8 as u16), self.registers.a);
                 self.cycle = 12;
             }
             0xF0 => {
                 byte8 = self.get_next_byte8();
-                self.registers.a = self.memory.borrow().get_addr(0xFF00 + (byte8 as u16));
+                self.registers.a = self.memory.lock().unwrap().get_addr(0xFF00 + (byte8 as u16));
                 self.cycle = 12;
             }
 
@@ -482,10 +479,10 @@ impl CPU {
             0x08 => {
                 byte = self.get_next_byte16();
                 self.memory
-                    .borrow_mut()
+                    .lock().unwrap()
                     .set_addr(byte, (self.registers.sp & 0x00ff) as u8);
                 self.memory
-                    .borrow_mut()
+                    .lock().unwrap()
                     .set_addr(byte + 1, (self.registers.sp >> 8) as u8);
                 self.cycle = 20;
             }
@@ -495,74 +492,74 @@ impl CPU {
             0xF5 => {
                 self.registers.sp -= 1;
                 self.memory
-                    .borrow_mut()
+                    .lock().unwrap()
                     .set_addr(self.registers.sp, self.registers.a);
                 self.registers.sp -= 1;
                 self.memory
-                    .borrow_mut()
+                    .lock().unwrap()
                     .set_addr(self.registers.sp, self.registers.f);
                 self.cycle = 16;
             }
             0xC5 => {
                 self.registers.sp -= 1;
                 self.memory
-                    .borrow_mut()
+                    .lock().unwrap()
                     .set_addr(self.registers.sp, self.registers.b);
                 self.registers.sp -= 1;
                 self.memory
-                    .borrow_mut()
+                    .lock().unwrap()
                     .set_addr(self.registers.sp, self.registers.c);
                 self.cycle = 16;
             }
             0xD5 => {
                 self.registers.sp -= 1;
                 self.memory
-                    .borrow_mut()
+                    .lock().unwrap()
                     .set_addr(self.registers.sp, self.registers.d);
                 self.registers.sp -= 1;
                 self.memory
-                    .borrow_mut()
+                    .lock().unwrap()
                     .set_addr(self.registers.sp, self.registers.e);
                 self.cycle = 16;
             }
             0xE5 => {
                 self.registers.sp -= 1;
                 self.memory
-                    .borrow_mut()
+                    .lock().unwrap()
                     .set_addr(self.registers.sp, self.registers.h);
                 self.registers.sp -= 1;
                 self.memory
-                    .borrow_mut()
+                    .lock().unwrap()
                     .set_addr(self.registers.sp, self.registers.l);
                 self.cycle = 16;
             }
 
             //POP
             0xF1 => {
-                self.registers.f = self.memory.borrow().get_addr(self.registers.sp);
+                self.registers.f = self.memory.lock().unwrap().get_addr(self.registers.sp);
                 self.registers.sp += 1;
-                self.registers.a = self.memory.borrow().get_addr(self.registers.sp);
+                self.registers.a = self.memory.lock().unwrap().get_addr(self.registers.sp);
                 self.registers.sp += 1;
                 self.cycle = 12;
             }
             0xC1 => {
-                self.registers.c = self.memory.borrow().get_addr(self.registers.sp);
+                self.registers.c = self.memory.lock().unwrap().get_addr(self.registers.sp);
                 self.registers.sp += 1;
-                self.registers.b = self.memory.borrow().get_addr(self.registers.sp);
+                self.registers.b = self.memory.lock().unwrap().get_addr(self.registers.sp);
                 self.registers.sp += 1;
                 self.cycle = 12;
             }
             0xD1 => {
-                self.registers.e = self.memory.borrow().get_addr(self.registers.sp);
+                self.registers.e = self.memory.lock().unwrap().get_addr(self.registers.sp);
                 self.registers.sp += 1;
-                self.registers.d = self.memory.borrow().get_addr(self.registers.sp);
+                self.registers.d = self.memory.lock().unwrap().get_addr(self.registers.sp);
                 self.registers.sp += 1;
                 self.cycle = 12;
             }
             0xE1 => {
-                self.registers.l = self.memory.borrow().get_addr(self.registers.sp);
+                self.registers.l = self.memory.lock().unwrap().get_addr(self.registers.sp);
                 self.registers.sp += 1;
-                self.registers.h = self.memory.borrow().get_addr(self.registers.sp);
+                self.registers.h = self.memory.lock().unwrap().get_addr(self.registers.sp);
                 self.registers.sp += 1;
                 self.cycle = 12;
             }
@@ -598,7 +595,7 @@ impl CPU {
                 self.cycle = 4;
             }
             0x86 => {
-                byte8 = self.memory.borrow().get_addr(self.registers.get_hl());
+                byte8 = self.memory.lock().unwrap().get_addr(self.registers.get_hl());
                 self.registers.a = self.add8(self.registers.a, byte8, false);
                 self.cycle = 8;
             }
@@ -638,7 +635,7 @@ impl CPU {
                 self.cycle = 4;
             }
             0x8E => {
-                byte8 = self.memory.borrow().get_addr(self.registers.get_hl());
+                byte8 = self.memory.lock().unwrap().get_addr(self.registers.get_hl());
                 self.registers.a = self.add8(self.registers.a, byte8, true);
                 self.cycle = 8;
             }
@@ -678,7 +675,7 @@ impl CPU {
                 self.cycle = 4;
             }
             0x96 => {
-                byte8 = self.memory.borrow().get_addr(self.registers.get_hl());
+                byte8 = self.memory.lock().unwrap().get_addr(self.registers.get_hl());
                 self.registers.a = self.sub8(self.registers.a, byte8, false);
                 self.cycle = 8;
             }
@@ -718,7 +715,7 @@ impl CPU {
                 self.cycle = 4;
             }
             0x9E => {
-                byte8 = self.memory.borrow().get_addr(self.registers.get_hl());
+                byte8 = self.memory.lock().unwrap().get_addr(self.registers.get_hl());
                 self.registers.a = self.sub8(self.registers.a, byte8, true);
                 self.cycle = 8;
             }
@@ -794,7 +791,7 @@ impl CPU {
                 self.cycle = 4;
             }
             0xA6 => {
-                self.registers.a &= self.memory.borrow().get_addr(self.registers.get_hl());
+                self.registers.a &= self.memory.lock().unwrap().get_addr(self.registers.get_hl());
                 self.registers.reset_flags();
                 self.registers.set_h();
                 if self.registers.a == 0x0 {
@@ -870,7 +867,7 @@ impl CPU {
                 self.cycle = 4;
             }
             0xB6 => {
-                self.registers.a |= self.memory.borrow().get_addr(self.registers.get_hl());
+                self.registers.a |= self.memory.lock().unwrap().get_addr(self.registers.get_hl());
                 self.registers.reset_flags();
                 if self.registers.a == 0x0 {
                     self.registers.set_z();
@@ -945,7 +942,7 @@ impl CPU {
                 self.cycle = 4;
             }
             0xAE => {
-                self.registers.a ^= self.memory.borrow().get_addr(self.registers.get_hl());
+                self.registers.a ^= self.memory.lock().unwrap().get_addr(self.registers.get_hl());
                 self.registers.reset_flags();
                 if self.registers.a == 0x0 {
                     self.registers.set_z();
@@ -992,7 +989,7 @@ impl CPU {
                 self.cycle = 4;
             }
             0xBE => {
-                byte8 = self.memory.borrow().get_addr(self.registers.get_hl());
+                byte8 = self.memory.lock().unwrap().get_addr(self.registers.get_hl());
                 self.sub8(self.registers.a, byte8, false);
                 self.cycle = 8;
             }
@@ -1083,10 +1080,10 @@ impl CPU {
             }
             0x34 => {
                 flag = self.registers.is_set_c();
-                byte8 = self.memory.borrow().get_addr(self.registers.get_hl());
+                byte8 = self.memory.lock().unwrap().get_addr(self.registers.get_hl());
                 byte8 = self.add8(byte8, 0x01, false);
                 self.memory
-                    .borrow_mut()
+                    .lock().unwrap()
                     .set_addr(self.registers.get_hl(), byte8);
                 if flag {
                     self.registers.set_c();
@@ -1169,10 +1166,10 @@ impl CPU {
             }
             0x35 => {
                 flag = self.registers.is_set_c();
-                byte8 = self.memory.borrow().get_addr(self.registers.get_hl());
+                byte8 = self.memory.lock().unwrap().get_addr(self.registers.get_hl());
                 byte8 = self.sub8(byte8, 0x01, false);
                 self.memory
-                    .borrow_mut()
+                    .lock().unwrap()
                     .set_addr(self.registers.get_hl(), byte8);
                 if flag {
                     self.registers.set_c();
@@ -1384,9 +1381,9 @@ impl CPU {
                     0x36 => {
                         self.registers.reset_flags();
                         byte = self.registers.get_hl();
-                        byte8 = self.memory.borrow().get_addr(byte);
+                        byte8 = self.memory.lock().unwrap().get_addr(byte);
                         byte8 = ((byte8 & 0x0f) << 4) | ((byte8 & 0xf0) >> 4);
-                        self.memory.borrow_mut().set_addr(byte, byte8);
+                        self.memory.lock().unwrap().set_addr(byte, byte8);
                         if byte8 == 0 {
                             self.registers.set_z();
                         }
@@ -1500,11 +1497,11 @@ impl CPU {
             0xCD => {
                 self.registers.sp -= 1;
                 self.memory
-                    .borrow_mut()
+                    .lock().unwrap()
                     .set_addr(self.registers.sp, ((self.registers.pc & 0xff00) >> 8) as u8);
                 self.registers.sp -= 1;
                 self.memory
-                    .borrow_mut()
+                    .lock().unwrap()
                     .set_addr(self.registers.sp, (self.registers.pc & 0x00ff) as u8);
                 byte = self.get_next_byte16();
                 self.registers.pc = byte;
@@ -1522,9 +1519,9 @@ impl CPU {
             }
             //RET [- - - -]
             0xC9 => {
-                byte = self.memory.borrow().get_addr(self.registers.sp) as u16;
+                byte = self.memory.lock().unwrap().get_addr(self.registers.sp) as u16;
                 self.registers.sp += 0x1;
-                byte = ((self.memory.borrow().get_addr(self.registers.sp) as u16) << 8) | byte;
+                byte = ((self.memory.lock().unwrap().get_addr(self.registers.sp) as u16) << 8) | byte;
                 self.registers.sp += 0x1;
                 self.registers.pc = byte;
                 self.cycle = 16;
@@ -1705,8 +1702,7 @@ impl CPU {
 #[cfg(test)]
 mod alu_intruction_tests {
 
-    use std::cell::RefCell;
-    use std::rc::Rc;
+    use std::sync::{Mutex,Arc};
 
     use super::CPUState;
     use super::CPU;
@@ -1789,9 +1785,8 @@ mod alu_intruction_tests {
     };
 
     fn get_next_state(current_state: (Registers, Memory, usize)) -> (Registers, Memory, usize) {
-        let memory = Rc::new(RefCell::new(current_state.1));
-        let memory_cpu = Rc::clone(&memory);
-        let memory_1 = Rc::clone(&memory);
+        let memory = Arc::new(Mutex::new(current_state.1));
+        let memory_1 = Arc::clone(&memory);
         let mut cpu = CPU {
             registers: current_state.0,
             memory: memory,
@@ -1801,7 +1796,7 @@ mod alu_intruction_tests {
         while cpu.state == CPUState::Active{
             cpu.execute();
         }
-        let mem = *memory_1.borrow();
+        let mem = *cpu.memory.lock().unwrap();
         (cpu.get_registers(), mem, cpu.get_cycles())
     }
 

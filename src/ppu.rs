@@ -20,8 +20,7 @@ CALL B6 FF at 0x6D FOR Super Mario
 use super::GumBoi;
 use super::Memory;
 
-use std::cell::RefCell;
-use std::rc::Rc;
+use std::sync::{Arc,Mutex};
 
 const LCDC: u16 = 0xFF40;
 
@@ -35,11 +34,11 @@ enum PPUModes {
 pub struct PPU {
     buffer: [u8; 16],
     mode: PPUModes,
-    memory: Rc<RefCell<Memory>>,
+    memory: Arc<Mutex<Memory>>,
 }
 
 impl PPU {
-    pub fn new(memory: Rc<RefCell<Memory>>) -> PPU {
+    pub fn new(memory: Arc<Mutex<Memory>>) -> PPU {
         PPU {
             buffer: [0u8; 16],
             mode: PPUModes::OAMSCAN,

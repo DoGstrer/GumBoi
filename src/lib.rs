@@ -16,9 +16,8 @@ use ppu::PPU;
 use registers::Flag;
 use registers::Registers;
 
-use std::cell::RefCell;
+use std::sync::{Mutex,Arc};
 use std::convert::TryInto;
-use std::rc::Rc;
 
 #[derive(PartialEq, Debug)]
 enum GumBoiState {
@@ -30,16 +29,16 @@ enum GumBoiState {
 pub struct GumBoi {
     cpu: CPU,
     ppu: PPU,
-    memory: Rc<RefCell<Memory>>,
+    memory: Arc<Mutex<Memory>>,
     cycle: usize,
     state: GumBoiState,
 }
 
 impl GumBoi {
     pub fn new() -> GumBoi {
-        let memory = Rc::new(RefCell::new(Memory::new()));
-        let memory_cpu = Rc::clone(&memory);
-        let memory_ppu = Rc::clone(&memory);
+        let memory = Arc::new(Mutex::new(Memory::new()));
+        let memory_cpu = Arc::clone(&memory);
+        let memory_ppu = Arc::clone(&memory);
 
         GumBoi {
             cpu: CPU::new(memory_cpu),
@@ -51,7 +50,7 @@ impl GumBoi {
     }
     pub fn insert_cartridge(&mut self, cartridge_rom: Vec<u8>) {
         //Load Catridge into GumBoi ROM
-        self.memory.try_borrow_mut().unwrap().load_cartridge(cartridge_rom);
+        self.memory.lock().unwrap().load_cartridge(cartridge_rom);
     }
     pub fn start(&mut self) {
         //self.memory.set_addr(0xff44,0x90);
