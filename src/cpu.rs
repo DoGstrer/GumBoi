@@ -36,15 +36,16 @@ impl CPU {
         }
     }
     fn get_next_byte8(&mut self) -> u8 {
+        let mut byte:u8 = self.memory.borrow().get_addr(self.registers.pc);
         self.registers.pc += 1;
-        self.memory.borrow().get_addr(self.registers.pc)
+        byte
     }
     fn get_next_byte16(&mut self) -> u16 {
         let mut byte: u16;
-        self.registers.pc += 1;
         byte = self.memory.borrow().get_addr(self.registers.pc) as u16;
         self.registers.pc += 1;
         byte |= (self.memory.borrow().get_addr(self.registers.pc) as u16) << 8;
+        self.registers.pc += 1;
         byte
     }
     pub fn execute(&mut self) {
@@ -55,6 +56,7 @@ impl CPU {
         let mut byte8: u8 = 0x0;
         let mut flag: bool = false;
 
+        self.registers.pc+=1;
         match opcode {
             //8 bit LD
             // LD r d8 [- - - -]
@@ -1443,7 +1445,6 @@ impl CPU {
             0x76 => {
                 self.state = CPUState::Halt;
                 self.cycle = 4;
-                return;
             }
             //JP NN (check)
             0xC3 => {
@@ -1532,11 +1533,9 @@ impl CPU {
             0xFF => {
                 println!("Changing state");
                 self.state = CPUState::Exit;
-                return;
             }
             _ => (panic!("Opcode missing in CPU : {:#0x?}", opcode)),
         }
-        self.registers.pc += 1;
     }
     //[Z 0 H C]
     fn add8(&mut self, a: u8, b: u8, carry: bool) -> u8 {
@@ -1808,7 +1807,7 @@ mod alu_intruction_tests {
 
     test_case![
         OxFF | (registers!(), memory!(0x0=>0xff), 0),
-        (registers!(), memory!(0x0=>0xff), 0)
+        (registers!(pc:1), memory!(0x0=>0xff), 0)
     ];
     //RLC [Z 0 0 C]
     test_case![
@@ -1819,7 +1818,7 @@ mod alu_intruction_tests {
                 0
             ),
         (
-            registers!(c: 0x0B,f:SET_C,pc:0x2),
+            registers!(c: 0x0B,f:SET_C,pc:0x3),
             memory!(0x0=>0xcb,0x1=>0x11,0x2=>0xff),
             8
         )
@@ -1829,7 +1828,7 @@ mod alu_intruction_tests {
     test_case![
         Ox17 | (registers!(a:0x95), memory!(0x0=>0x17,0x1=>0xff), 0),
         (
-            registers!(a:0x2A,f:SET_C,pc:1),
+            registers!(a:0x2A,f:SET_C,pc:2),
             memory!(0x0=>0x17,0x1=>0xff),
             4
         )
@@ -1842,7 +1841,7 @@ mod alu_intruction_tests {
             0
         ),
         (
-            registers!(h:0x9F,l:0xFF,pc:3),
+            registers!(h:0x9F,l:0xFF,pc:4),
             memory!(0x0=>0x21,0x1=>0xff,0x2=>0x9f,0x3=>0xff),
             12
         )
@@ -1855,7 +1854,7 @@ mod alu_intruction_tests {
             0
         ),
         (
-            registers!(a:0x0,h:0x1,l:0x0,pc:0x1),
+            registers!(a:0x0,h:0x1,l:0x0,pc:0x2),
             memory!(0x0=>0x32,0x1=>0xff),
             8
         )
@@ -1869,7 +1868,7 @@ mod alu_intruction_tests {
                 0
             ),
         (
-            registers!(f:SET_Z,pc:2),
+            registers!(f:SET_Z,pc:3),
             memory!(0x0=>0x20,0x1=>0x03,0x2=>0xFF,0x3=>0xFF,0x4=>0xFF),
             8
         )
@@ -1883,7 +1882,7 @@ mod alu_intruction_tests {
                 0
             ),
         (
-            registers!(pc:5),
+            registers!(pc:6),
             memory!(0x0=>0x20,0x1=>0x03,0x2=>0xFF,0x3=>0xFF,0x4=>0xFF,0x5=>0xFF),
             12
         )
@@ -1897,7 +1896,7 @@ mod alu_intruction_tests {
                 0
             ),
         (
-            registers!(h:0x80,pc:2,f:SET_H),
+            registers!(h:0x80,pc:3,f:SET_H),
             memory!(0x0=>0xcb,0x1=>0x7c,0x2=>0xff),
             8
         )
@@ -1912,7 +1911,7 @@ mod alu_intruction_tests {
                 0
             ),
         (
-            registers!(pc:4,f:SET_Z),
+            registers!(pc:5,f:SET_Z),
             memory!(0x0=>0x28,0x1=>0x02,0x2=>0xff,0x3=>0xff,0x4=>0xff),
             12
         )
@@ -1927,7 +1926,7 @@ mod alu_intruction_tests {
                 0
             ),
         (
-            registers!(pc:2),
+            registers!(pc:3),
             memory!(0x0=>0x28,0x1=>0x02,0x2=>0xff,0x3=>0xff,0x4=>0xff),
             8
         )
@@ -1942,7 +1941,7 @@ mod alu_intruction_tests {
                 0
             ),
         (
-            registers!(a:0x01,pc:2),
+            registers!(a:0x01,pc:3),
             memory!(0x0=>0xFF,0x1=>0x3C,0x2=>0xFF,0x3=>0x18,0x4=>0xFC,0x5=>0xff,0x6=>0xff),
             4
         )
@@ -1957,7 +1956,7 @@ mod alu_intruction_tests {
                 0
             ),
         (
-            registers!(a:0x01,pc:7),
+            registers!(a:0x01,pc:8),
             memory!(0x0=>0xFF,0x1=>0x3C,0x2=>0xFF,0x3=>0x18,0x4=>0x01,0x5=>0xff,0x6=>0x3c,0x7=>0xff),
             4
         )
@@ -1972,7 +1971,7 @@ mod alu_intruction_tests {
                 0
             ),
         (
-            registers!(a:0x00,pc:1,f:SET_H | SET_Z | SET_C),
+            registers!(a:0x00,pc:2,f:SET_H | SET_Z | SET_C),
             memory!(0x0=>0x3c,0x1=>0xff),
             4
         )
@@ -1987,7 +1986,7 @@ mod alu_intruction_tests {
                 0
             ),
         (
-            registers!(a:0x0F,f:SET_C,pc:1),
+            registers!(a:0x0F,f:SET_C,pc:2),
             memory!(0x0=>0x3C,0x1=>0xFF),
             4
         )
@@ -1998,7 +1997,7 @@ mod alu_intruction_tests {
     test_case![
         Ox3E | (registers!(), memory!(0x0=>0x3E,0x1=>0xFE,0x2=>0xFF), 0),
         (
-            registers!(a:0xFE,pc:2),
+            registers!(a:0xFE,pc:3),
             memory!(0x0=>0x3E,0x1=>0xFE,0x2=>0xFF),
             8
         )
@@ -2007,7 +2006,7 @@ mod alu_intruction_tests {
     test_case![
         Ox06 | (registers!(), memory!(0x0=>0x06,0x1=>0xFE,0x2=>0xFF), 0),
         (
-            registers!(b:0xFE,pc:2),
+            registers!(b:0xFE,pc:3),
             memory!(0x0=>0x06,0x1=>0xFE,0x2=>0xFF),
             8
         )
@@ -2016,7 +2015,7 @@ mod alu_intruction_tests {
     test_case![
         Ox0E | (registers!(), memory!(0x0=>0x0E,0x1=>0xFE,0x2=>0xFF), 0),
         (
-            registers!(c:0xFE,pc:2),
+            registers!(c:0xFE,pc:3),
             memory!(0x0=>0x0E,0x1=>0xFE,0x2=>0xFF),
             8
         )
@@ -2025,7 +2024,7 @@ mod alu_intruction_tests {
     test_case![
         Ox16 | (registers!(), memory!(0x0=>0x16,0x1=>0xFE,0x2=>0xFF), 0),
         (
-            registers!(d:0xFE,pc:2),
+            registers!(d:0xFE,pc:3),
             memory!(0x0=>0x16,0x1=>0xFE,0x2=>0xFF),
             8
         )
@@ -2034,7 +2033,7 @@ mod alu_intruction_tests {
     test_case![
         Ox1E | (registers!(), memory!(0x0=>0x1E,0x1=>0xFE,0x2=>0xFF), 0),
         (
-            registers!(e:0xFE,pc:2),
+            registers!(e:0xFE,pc:3),
             memory!(0x0=>0x1E,0x1=>0xFE,0x2=>0xFF),
             8
         )
@@ -2043,7 +2042,7 @@ mod alu_intruction_tests {
     test_case![
         Ox26 | (registers!(), memory!(0x0=>0x26,0x1=>0xFE,0x2=>0xFF), 0),
         (
-            registers!(h:0xFE,pc:2),
+            registers!(h:0xFE,pc:3),
             memory!(0x0=>0x26,0x1=>0xFE,0x2=>0xFF),
             8
         )
@@ -2052,7 +2051,7 @@ mod alu_intruction_tests {
     test_case![
         Ox2E | (registers!(), memory!(0x0=>0x2E,0x1=>0xFE,0x2=>0xFF), 0),
         (
-            registers!(l:0xFE,pc:2),
+            registers!(l:0xFE,pc:3),
             memory!(0x0=>0x2E,0x1=>0xFE,0x2=>0xFF),
             8
         )
@@ -2065,7 +2064,7 @@ mod alu_intruction_tests {
             0
         ),
         (
-            registers!(h:0x01,l:0x00,pc:2),
+            registers!(h:0x01,l:0x00,pc:3),
             memory!(0x0=>0x36,0x1=>0xFE,0x2=>0xFF,0x100=>0xFE),
             12
         )
@@ -2073,7 +2072,7 @@ mod alu_intruction_tests {
     test_case![
         Ox87_Zero | (registers!(a:0x0,f:SET_N), memory!(0x0=>0x87,0x1=>0xff), 0),
         (
-            registers!(a:0x0,f:SET_Z,pc:1),
+            registers!(a:0x0,f:SET_Z,pc:2),
             memory!(0x0=>0x87,0x1=>0xff),
             4
         )
@@ -2081,7 +2080,7 @@ mod alu_intruction_tests {
     test_case![
         Ox87_With_Half_Carry | (registers!(a:0x0f,f:SET_N), memory!(0x0=>0x87,0x1=>0xff), 0),
         (
-            registers!(a:0x1e,f:SET_H,pc:1),
+            registers!(a:0x1e,f:SET_H,pc:2),
             memory!(0x0=>0x87,0x1=>0xff),
             4
         )
@@ -2089,7 +2088,7 @@ mod alu_intruction_tests {
     test_case![
         Ox87_With_Carry | (registers!(a:0x80,f:SET_N), memory!(0x0=>0x87,0x1=>0xff), 0),
         (
-            registers!(a:0x00,f:SET_Z|SET_C,pc:1),
+            registers!(a:0x00,f:SET_Z|SET_C,pc:2),
             memory!(0x0=>0x87,0x1=>0xff),
             4
         )
@@ -2097,7 +2096,7 @@ mod alu_intruction_tests {
     test_case![
         Ox87_With_Both_Carry | (registers!(a:0x88,f:SET_N), memory!(0x0=>0x87,0x1=>0xff), 0),
         (
-            registers!(a:0x10,f:SET_H|SET_C,pc:1),
+            registers!(a:0x10,f:SET_H|SET_C,pc:2),
             memory!(0x0=>0x87,0x1=>0xff),
             4
         )
@@ -2110,7 +2109,7 @@ mod alu_intruction_tests {
                 0
             ),
         (
-            registers!(a:0x0,f:SET_Z,pc:1),
+            registers!(a:0x0,f:SET_Z,pc:2),
             memory!(0x0=>0x80,0x1=>0xff),
             4
         )
@@ -2123,7 +2122,7 @@ mod alu_intruction_tests {
                 0
             ),
         (
-            registers!(a:0x10,b:0x01,f:SET_H,pc:1),
+            registers!(a:0x10,b:0x01,f:SET_H,pc:2),
             memory!(0x0=>0x80,0x1=>0xff),
             4
         )
@@ -2136,7 +2135,7 @@ mod alu_intruction_tests {
                 0
             ),
         (
-            registers!(a:0x00,b:0x10,f:SET_Z|SET_C,pc:1),
+            registers!(a:0x00,b:0x10,f:SET_Z|SET_C,pc:2),
             memory!(0x0=>0x80,0x1=>0xff),
             4
         )
@@ -2149,7 +2148,7 @@ mod alu_intruction_tests {
                 0
             ),
         (
-            registers!(a:0x00,b:0x01,f:SET_H|SET_C|SET_Z,pc:1),
+            registers!(a:0x00,b:0x01,f:SET_H|SET_C|SET_Z,pc:2),
             memory!(0x0=>0x80,0x1=>0xff),
             4
         )
