@@ -4,6 +4,9 @@ add16 : 12 instructions
 sub8 : 37 instructions
 sub16 : 7 instructions
 */
+
+// ANCHOR <Opcode> | <Instruction> | <[Z N H C]> | <Bytes> | <Cycles>
+
 use std::sync::{Mutex,Arc};
 
 use super::memory::Memory;
@@ -19,10 +22,11 @@ pub enum CPUState {
 }
 
 pub struct CPU {
-    pub registers: Registers,
-    pub memory: Arc<Mutex<Memory>>,
-    pub cycle: usize,
-    pub state: CPUState,
+    registers: Registers,
+    memory: Arc<Mutex<Memory>>,
+    cycle: usize,
+    state: CPUState,
+    ime: bool // Interrupt Master Enable
 }
 
 impl CPU {
@@ -32,6 +36,7 @@ impl CPU {
             cycle: 0,
             state: CPUState::Active,
             memory: memory,
+            ime: false,
         }
     }
     fn get_next_byte8(&mut self) -> u8 {
@@ -56,6 +61,7 @@ impl CPU {
         let mut flag: bool = false;
 
         self.registers.pc+=1;
+        // SECTION CPU Instructions
         match opcode {
             //8 bit LD
             // LD r d8 [- - - -]
@@ -487,83 +493,56 @@ impl CPU {
                 self.cycle = 20;
             }
 
-            //Stack Operations
-            //PUSH
+            // SECTION Stack Operations
+            // SECTION PUSH
+            // 0xF5 -> PUSH AF | [- - - -] | 1 | 16 
             0xF5 => {
-                self.registers.sp -= 1;
-                self.memory
-                    .lock().unwrap()
-                    .set_addr(self.registers.sp, self.registers.a);
-                self.registers.sp -= 1;
-                self.memory
-                    .lock().unwrap()
-                    .set_addr(self.registers.sp, self.registers.f);
+                self.push(self.registers.get_af());
                 self.cycle = 16;
             }
+            // 0xC5 -> PUSH BC | [- - - -] | 1 | 16
             0xC5 => {
-                self.registers.sp -= 1;
-                self.memory
-                    .lock().unwrap()
-                    .set_addr(self.registers.sp, self.registers.b);
-                self.registers.sp -= 1;
-                self.memory
-                    .lock().unwrap()
-                    .set_addr(self.registers.sp, self.registers.c);
+                self.push(self.registers.get_bc());
                 self.cycle = 16;
             }
+            // 0xD5 -> PUSH DE | [- - - -] | 1 | 16
             0xD5 => {
-                self.registers.sp -= 1;
-                self.memory
-                    .lock().unwrap()
-                    .set_addr(self.registers.sp, self.registers.d);
-                self.registers.sp -= 1;
-                self.memory
-                    .lock().unwrap()
-                    .set_addr(self.registers.sp, self.registers.e);
+                self.push(self.registers.get_de());
                 self.cycle = 16;
             }
+            // 0xE5 -> PUSH HL | [- - - -] | 1 | 16
             0xE5 => {
-                self.registers.sp -= 1;
-                self.memory
-                    .lock().unwrap()
-                    .set_addr(self.registers.sp, self.registers.h);
-                self.registers.sp -= 1;
-                self.memory
-                    .lock().unwrap()
-                    .set_addr(self.registers.sp, self.registers.l);
+                self.push(self.registers.get_hl());
                 self.cycle = 16;
             }
-
-            //POP
+            // !SECTION
+            // SECTION POP
+            // 0xF1 -> POP AF | [- - - -] | 1 | 12
             0xF1 => {
-                self.registers.f = self.memory.lock().unwrap().get_addr(self.registers.sp);
-                self.registers.sp += 1;
-                self.registers.a = self.memory.lock().unwrap().get_addr(self.registers.sp);
-                self.registers.sp += 1;
+                byte = self.pop();
+                self.registers.set_af(byte);
                 self.cycle = 12;
             }
+            // 0xC1 -> POP BC | [- - - -] | 1 | 12
             0xC1 => {
-                self.registers.c = self.memory.lock().unwrap().get_addr(self.registers.sp);
-                self.registers.sp += 1;
-                self.registers.b = self.memory.lock().unwrap().get_addr(self.registers.sp);
-                self.registers.sp += 1;
+                byte = self.pop();
+                self.registers.set_bc(byte);
                 self.cycle = 12;
             }
+            // 0xD1 -> POP DE | [- - - -] | 1 | 12
             0xD1 => {
-                self.registers.e = self.memory.lock().unwrap().get_addr(self.registers.sp);
-                self.registers.sp += 1;
-                self.registers.d = self.memory.lock().unwrap().get_addr(self.registers.sp);
-                self.registers.sp += 1;
+                byte = self.pop();
+                self.registers.set_de(byte);
                 self.cycle = 12;
             }
+            // 0xE1 -> POP HL | [- - - -] | 1 | 12
             0xE1 => {
-                self.registers.l = self.memory.lock().unwrap().get_addr(self.registers.sp);
-                self.registers.sp += 1;
-                self.registers.h = self.memory.lock().unwrap().get_addr(self.registers.sp);
-                self.registers.sp += 1;
+                byte = self.pop();
+                self.registers.set_hl(byte);
                 self.cycle = 12;
             }
-
+            // !SECTION
+            // !SECTION
             // 8 BIT ALU
             //ADD
             0x87 => {
@@ -1000,7 +979,7 @@ impl CPU {
             }
 
             //INC
-            // INC A [- * 0 *]
+            // INC A [Z 0 H -]
             0x3C => {
                 flag = self.registers.is_set_c();
                 self.registers.a = self.add8(self.registers.a, 0x01, false);
@@ -1441,7 +1420,7 @@ impl CPU {
             //HALT
             0x76 => {
                 self.state = CPUState::Halt;
-                self.cycle = 4;
+                //self.cycle = 4;
             }
             //JP NN (check)
             0xC3 => {
@@ -1493,20 +1472,59 @@ impl CPU {
                 self.registers.set_flags(flag);
                 self.cycle = 12;
             }
-            // CALL NN (check)
+            // SECTION CALL Instructions
+            // ANCHOR CALL a16 | [- - - -] | 3 | 24
             0xCD => {
-                self.registers.sp -= 1;
-                self.memory
-                    .lock().unwrap()
-                    .set_addr(self.registers.sp, ((self.registers.pc & 0xff00) >> 8) as u8);
-                self.registers.sp -= 1;
-                self.memory
-                    .lock().unwrap()
-                    .set_addr(self.registers.sp, (self.registers.pc & 0x00ff) as u8);
                 byte = self.get_next_byte16();
+                self.push(self.registers.pc);
                 self.registers.pc = byte;
                 self.cycle = 24;
             }
+            // ANCHOR CALL NZ, a16 | [- - - -] | 3 | 24/12
+            0xC4 => {
+                byte = self.get_next_byte16();
+                if !self.registers.is_set_z(){
+                    self.push(self.registers.pc);
+                    self.registers.pc = byte;
+                    self.cycle = 24;
+                }else{
+                    self.cycle = 12;
+                }
+            } 
+            // ANCHOR CALL Z, a16 | [- - - -] | 3 | 24/12
+            0xCC => {
+                byte = self.get_next_byte16();
+                if self.registers.is_set_z(){
+                    self.push(self.registers.pc);
+                    self.registers.pc = byte;
+                    self.cycle = 24;
+                }else{
+                    self.cycle = 12;
+                }
+            } 
+            // ANCHOR CALL NC, a16 | [- - - -] | 3 | 24/12
+            0xD4 => {
+                byte = self.get_next_byte16();
+                if !self.registers.is_set_c(){
+                    self.push(self.registers.pc);
+                    self.registers.pc = byte;
+                    self.cycle = 24;
+                }else{
+                    self.cycle = 12;
+                }
+            } 
+            // ANCHOR CALL C, a16 | [- - - -] | 3 | 24/12
+            0xDC => {
+                byte = self.get_next_byte16();
+                if self.registers.is_set_c(){
+                    self.push(self.registers.pc);
+                    self.registers.pc = byte;
+                    self.cycle = 24;
+                }else{
+                    self.cycle = 12;
+                }
+            } 
+            // !SECTION
             //RLA
             0x17 => {
                 byte8 = self.registers.get_flags();
@@ -1517,22 +1535,118 @@ impl CPU {
                 self.registers.a = self.registers.a << 1 | (byte8 & 0b00010000) >> 4;
                 self.cycle = 4;
             }
-            //RET [- - - -]
+            // SECTION Return Instructions
+            // ANCHOR RET | [- - - -] | 1 | 16
             0xC9 => {
-                byte = self.memory.lock().unwrap().get_addr(self.registers.sp) as u16;
-                self.registers.sp += 0x1;
-                byte = ((self.memory.lock().unwrap().get_addr(self.registers.sp) as u16) << 8) | byte;
-                self.registers.sp += 0x1;
+                byte = self.pop();
                 self.registers.pc = byte;
                 self.cycle = 16;
             }
-            //TO REMOVE | FOR TESTING PURPOSE ONLY | ALTERNATIVE UNTIL INTERRUPT IS SETUP
-            0xFF => {
-                println!("Changing state");
-                self.state = CPUState::Exit;
+            // ANCHOR RET NZ | [- - - -] | 1 | 20/8
+            0xC0 => {
+                if !self.registers.is_set_z(){
+                    byte = self.pop();
+                    self.registers.pc = byte;
+                    self.cycle = 20
+                }
+                else{
+                    self.cycle = 8;
+                }
+            } 
+            // ANCHOR RET Z | [- - - -] | 1 | 20/8
+            0xC8 => {                 
+                if self.registers.is_set_z(){
+                    byte = self.pop();
+                    self.registers.pc = byte;
+                    self.cycle = 20
+                }else{
+                self.cycle = 8;
+                }
             }
+            // ANCHOR RET NC | [- - - -] | 1 | 20/8
+            0xD0 => {
+                if !self.registers.is_set_c(){
+                    byte = self.pop();
+                    self.registers.pc = byte;
+                    self.cycle = 20
+                }
+                else{
+                    self.cycle = 8;
+                }
+            } 
+            // ANCHOR RET C | [- - - -] | 1 | 20/8
+            0xD8 => {                 
+                if self.registers.is_set_c(){
+                    byte = self.pop();
+                    self.registers.pc = byte;
+                    self.cycle = 20
+                }else{
+                self.cycle = 8;
+                }
+            }
+            // ANCHOR RETI | [- - - -] | 1 | 16
+            0xD9 => {
+                byte = self.pop();
+                self.registers.pc = byte;
+                self.ime = true;
+                self.cycle = 16;
+            }
+            // !SECTION
+
+            // SECTION Reset
+            // ANCHOR RST 00H | [- - - -] | 1 | 16
+            0xC7 => {
+                self.push(self.registers.pc);
+                self.registers.pc = 0x00;
+                self.cycle = 16;
+            }
+            // ANCHOR RST 08H | [- - - -] | 1 | 16
+            0xCF => {
+                self.push(self.registers.pc);
+                self.registers.pc = 0x08;
+                self.cycle = 16;
+            }
+            // ANCHOR RST 10H | [- - - -] | 1 | 16
+            0xD7 => {
+                self.push(self.registers.pc);
+                self.registers.pc = 0x10;
+                self.cycle = 16;
+            }
+            // ANCHOR RST 18H | [- - - -] | 1 | 16
+            0xDF => {
+                self.push(self.registers.pc);
+                self.registers.pc = 0x18;
+                self.cycle = 16;
+            }
+            // ANCHOR RST 20H | [- - - -] | 1 | 16
+            0xE7 => {
+                self.push(self.registers.pc);
+                self.registers.pc = 0x20;
+                self.cycle = 16;
+            }
+            // ANCHOR RST 28H | [- - - -] | 1 | 16
+            0xEF => {
+                self.push(self.registers.pc);
+                self.registers.pc = 0x28;
+                self.cycle = 16;
+            }
+            // ANCHOR RST 30H | [- - - -] | 1 | 16
+            0xF7 => {
+                self.push(self.registers.pc);
+                self.registers.pc = 0x30;
+                self.cycle = 16;
+            }
+            // ANCHOR RST 38H | [- - - -] | 1 | 16 
+            0xFF => {
+                self.push(self.registers.pc);
+                self.registers.pc = 0x38;
+                self.cycle = 16;
+            }
+            // !SECTION
+
             _ => (panic!("Opcode missing in CPU : {:#0x?}", opcode)),
         }
+        // !SECTION
     }
     //[Z 0 H C]
     fn add8(&mut self, a: u8, b: u8, carry: bool) -> u8 {
@@ -1698,35 +1812,65 @@ impl CPU {
     }
 }
 
-//TODO revamp unit tests
+// SECTION CPU Stack Trait
+pub trait Stack{
+    fn push(&mut self,a16: u16);
+    fn pop(&mut self) -> u16;
+}
+
+impl Stack for CPU{
+    fn push(&mut self, a16: u16){
+        self.registers.sp-=1;
+        self.memory.lock().unwrap().set_addr(self.registers.sp,(a16>>8) as u8);
+        self.registers.sp-=1;
+        self.memory.lock().unwrap().set_addr(self.registers.sp,(a16 & 0x00ff) as u8);
+    }
+    fn pop(&mut self) -> u16{
+        let mut byte: u16;
+        byte = self.memory.lock().unwrap().get_addr(self.registers.sp) as u16;
+        self.registers.sp+=1;
+        byte |= (self.memory.lock().unwrap().get_addr(self.registers.sp) as u16) << 8;
+        self.registers.sp+=1;
+        byte
+    }
+}
+// !SECTION
+
+// SECTION CPU Test Cases
 #[cfg(test)]
-mod alu_intruction_tests {
+mod cpu_intruction_tests {
+
+    const SET_Z: u8 = 0b10000000;
+    const SET_N: u8 = 0b01000000;
+    const SET_H: u8 = 0b00100000;
+    const SET_C: u8 = 0b00010000;
+
+    const RESET_Z: u8 = 0b01111111;
+    const RESET_N: u8 = 0b10111111;
+    const RESET_H: u8 = 0b11011111;
+    const RESET_C: u8 = 0b11101111;
+
+    const EMPTY_REGISTERS: Registers = Registers {
+        a: 0x0,
+        b: 0x0,
+        c: 0x0,
+        d: 0x0,
+        e: 0x0,
+        f: 0x0,
+        h: 0x0,
+        l: 0x0,
+        sp: 0x0,
+        pc: 0x0,
+    };
 
     use std::sync::{Mutex,Arc};
-
     use super::CPUState;
     use super::CPU;
     use super::Memory;
     use super::Registers;
     use std::convert::TryInto;
 
-    macro_rules! arr_u8 {
-        ( $size:expr,[$($x:expr),*] ) => {
-            {
-                let mut temp_a = Vec::new();
-                $(
-                    temp_a.push($x);
-                )*
-                temp_a.push(0xff);
-                let mut temp_b:[u8;$size] = [0;$size];
-                for (temp_index,temp_a_elem) in temp_a.iter().enumerate(){
-                    temp_b[temp_index] = *temp_a_elem;
-                }
-                temp_b
-            }
-        };
-    }
-
+    // SECTION Macros
     macro_rules! registers {
         ($($register_name:ident:$register_value:expr),*) => {
             {
@@ -1760,30 +1904,7 @@ mod alu_intruction_tests {
             }
         };
     }
-
-    const SET_Z: u8 = 0b10000000;
-    const SET_N: u8 = 0b01000000;
-    const SET_H: u8 = 0b00100000;
-    const SET_C: u8 = 0b00010000;
-
-    const RESET_Z: u8 = 0b01111111;
-    const RESET_N: u8 = 0b10111111;
-    const RESET_H: u8 = 0b11011111;
-    const RESET_C: u8 = 0b11101111;
-
-    const EMPTY_REGISTERS: Registers = Registers {
-        a: 0x0,
-        b: 0x0,
-        c: 0x0,
-        d: 0x0,
-        e: 0x0,
-        f: 0x0,
-        h: 0x0,
-        l: 0x0,
-        sp: 0x0,
-        pc: 0x0,
-    };
-
+    // !SECTION
     fn get_next_state(current_state: (Registers, Memory, usize)) -> (Registers, Memory, usize) {
         let memory = Arc::new(Mutex::new(current_state.1));
         let memory_1 = Arc::clone(&memory);
@@ -1792,6 +1913,7 @@ mod alu_intruction_tests {
             memory: memory,
             cycle: current_state.2,
             state: CPUState::Active,
+            ime: false,
         };
         while cpu.state == CPUState::Active{
             cpu.execute();
@@ -1800,299 +1922,295 @@ mod alu_intruction_tests {
         (cpu.get_registers(), mem, cpu.get_cycles())
     }
 
+    // ANCHOR 0x76 | HALT | [- - - -] | 1 | 4
     test_case![
-        OxFF | (registers!(), memory!(0x0=>0xff), 0),
-        (registers!(pc:1), memory!(0x0=>0xff), 0)
+        Ox76 | (registers!(), memory!(0x0=>0x76), 0),
+        (registers!(pc:1), memory!(0x0=>0x76), 0)
     ];
-    //RLC [Z 0 0 C]
+    // ANCHOR 0xCB 0x11 | RL C | [Z 0 0 C] | 2 | 8
     test_case![
         OxCB_Ox11
             | (
                 registers!(c: 0x85),
-                memory!(0x0=>0xcb,0x1=>0x11,0x2=>0xff),
+                memory!(0x0=>0xCB,0x1=>0x11,0x2=>0x76),
                 0
             ),
         (
             registers!(c: 0x0B,f:SET_C,pc:0x3),
-            memory!(0x0=>0xcb,0x1=>0x11,0x2=>0xff),
+            memory!(0x0=>0xCB,0x1=>0x11,0x2=>0x76),
             8
         )
     ];
-
-    //RLA [0 0 0 C]
+    // ANCHOR 0x17 | RLA | [0 0 0 C] | 1 | 4
     test_case![
-        Ox17 | (registers!(a:0x95), memory!(0x0=>0x17,0x1=>0xff), 0),
+        Ox17 | (registers!(a:0x95), memory!(0x0=>0x17,0x1=>0x76), 0),
         (
             registers!(a:0x2A,f:SET_C,pc:2),
-            memory!(0x0=>0x17,0x1=>0xff),
+            memory!(0x0=>0x17,0x1=>0x76),
             4
         )
     ];
-
+    // ANCHOR 0x21 | LD HL, d16 | [- - - -] | 3 | 12
     test_case![
         Ox21 | (
             registers!(),
-            memory!(0x0=>0x21,0x1=>0xff,0x2=>0x9f,0x3=>0xff),
+            memory!(0x0=>0x21,0x1=>0xff,0x2=>0x9f,0x3=>0x76),
             0
         ),
         (
             registers!(h:0x9F,l:0xFF,pc:4),
-            memory!(0x0=>0x21,0x1=>0xff,0x2=>0x9f,0x3=>0xff),
+            memory!(0x0=>0x21,0x1=>0xff,0x2=>0x9f,0x3=>0x76),
             12
         )
     ];
-
+    // ANCHOR 0x32 | LD (HL-), A | 1 | 8
     test_case![
         Ox32 | (
             registers!(a:0x0,h:0x1,l:0x1),
-            memory!(0x0=>0x32,0x1=>0xff),
+            memory!(0x0=>0x32,0x1=>0x76),
             0
         ),
         (
             registers!(a:0x0,h:0x1,l:0x0,pc:0x2),
-            memory!(0x0=>0x32,0x1=>0xff),
+            memory!(0x0=>0x32,0x1=>0x76),
             8
         )
     ];
-
+    // ANCHOR 0x20 | JR NZ, r8 | 2 | 12/8
     test_case![
-        Ox20_with_z_set
+        Ox20_with_Z_set
             | (
                 registers!(f: SET_Z),
-                memory!(0x0=>0x20,0x1=>0x03,0x2=>0xFF,0x3=>0xFF,0x4=>0xFF),
+                memory!(0x0=>0x20,0x1=>0x03,0x2=>0x76,0x3=>0xFF,0x4=>0xFF),
                 0
             ),
         (
             registers!(f:SET_Z,pc:3),
-            memory!(0x0=>0x20,0x1=>0x03,0x2=>0xFF,0x3=>0xFF,0x4=>0xFF),
+            memory!(0x0=>0x20,0x1=>0x03,0x2=>0x76,0x3=>0xFF,0x4=>0xFF),
             8
         )
     ];
-
     test_case![
-        Ox20_with_z_not_set
-            | (
+        Ox20_with_Z_not_set | 
+        (
                 registers!(),
-                memory!(0x0=>0x20,0x1=>0x03,0x2=>0xFF,0x3=>0xFF,0x4=>0xFF,0x5=>0xFF),
+                memory!(0x0=>0x20,0x1=>0x03,0x2=>0xFF,0x3=>0xFF,0x4=>0xFF,0x5=>0x76),
                 0
-            ),
+        ),
         (
             registers!(pc:6),
-            memory!(0x0=>0x20,0x1=>0x03,0x2=>0xFF,0x3=>0xFF,0x4=>0xFF,0x5=>0xFF),
+            memory!(0x0=>0x20,0x1=>0x03,0x2=>0xFF,0x3=>0xFF,0x4=>0xFF,0x5=>0x76),
             12
         )
     ];
-
+    // ANCHOR 0xCB 0x7C | BIT 7, H | [Z 0 1 -] | 2 | 8
     test_case![
-        OxCB_Ox7C
-            | (
+        OxCB_Ox7C | 
+        (
                 registers!(h:0x80),
-                memory!(0x0=>0xcb,0x1=>0x7c,0x2=>0xff),
+                memory!(0x0=>0xcb,0x1=>0x7c,0x2=>0x76),
                 0
-            ),
+        ),
         (
             registers!(h:0x80,pc:3,f:SET_H),
-            memory!(0x0=>0xcb,0x1=>0x7c,0x2=>0xff),
+            memory!(0x0=>0xcb,0x1=>0x7c,0x2=>0x76),
             8
         )
     ];
-
-    //JR Z,r8
+    // ANCHOR 0x28 | JR Z, r8 | [- - - -] | 12/8
     test_case![
-        Ox28_with_z_set
-            | (
+        Ox28_with_Z_set | 
+        (
                 registers!(f: SET_Z),
-                memory!(0x0=>0x28,0x1=>0x02,0x2=>0xff,0x3=>0xff,0x4=>0xff),
+                memory!(0x0=>0x28,0x1=>0x02,0x2=>0x76,0x3=>0x76,0x4=>0x76),
                 0
-            ),
+        ),
         (
             registers!(pc:5,f:SET_Z),
-            memory!(0x0=>0x28,0x1=>0x02,0x2=>0xff,0x3=>0xff,0x4=>0xff),
+            memory!(0x0=>0x28,0x1=>0x02,0x2=>0x76,0x3=>0x76,0x4=>0x76),
             12
         )
     ];
-
-    //JR Z,r8
     test_case![
-        Ox28_with_z_not_set
+        Ox28_with_Z_not_set
             | (
                 registers!(),
-                memory!(0x0=>0x28,0x1=>0x02,0x2=>0xff,0x3=>0xff,0x4=>0xff),
+                memory!(0x0=>0x28,0x1=>0x02,0x2=>0x76,0x3=>0x76,0x4=>0x76),
                 0
             ),
         (
             registers!(pc:3),
-            memory!(0x0=>0x28,0x1=>0x02,0x2=>0xff,0x3=>0xff,0x4=>0xff),
+            memory!(0x0=>0x28,0x1=>0x02,0x2=>0x76,0x3=>0x76,0x4=>0x76),
             8
         )
     ];
-
-    //JR i8 [- - - -]
+    // ANCHOR 0x18 | JR i8 | [- - - -] | 2 | 12
     test_case![
         Ox18_negative_jump
             | (
                 registers!(a:0x00,pc:3),
-                memory!(0x0=>0xFF,0x1=>0x3C,0x2=>0xFF,0x3=>0x18,0x4=>0xFC,0x5=>0xff,0x6=>0xff),
+                memory!(0x0=>0x76,0x1=>0x3C,0x2=>0x76,0x3=>0x18,0x4=>0xFC,0x5=>0x76,0x6=>0x76),
                 0
             ),
         (
             registers!(a:0x01,pc:3),
-            memory!(0x0=>0xFF,0x1=>0x3C,0x2=>0xFF,0x3=>0x18,0x4=>0xFC,0x5=>0xff,0x6=>0xff),
+            memory!(0x0=>0x76,0x1=>0x3C,0x2=>0x76,0x3=>0x18,0x4=>0xFC,0x5=>0x76,0x6=>0x76),
             4
         )
     ];
-
-    //JR i8 [- - - -]
     test_case![
         Ox18_positive_jump
             | (
                 registers!(a:0x00,pc:3),
-                memory!(0x0=>0xFF,0x1=>0x3C,0x2=>0xFF,0x3=>0x18,0x4=>0x01,0x5=>0xff,0x6=>0x3c,0x7=>0xff),
+                memory!(0x0=>0x76,0x1=>0x3C,0x2=>0x76,0x3=>0x18,0x4=>0x01,0x5=>0x76,0x6=>0x3c,0x7=>0x76),
                 0
             ),
         (
             registers!(a:0x01,pc:8),
-            memory!(0x0=>0xFF,0x1=>0x3C,0x2=>0xFF,0x3=>0x18,0x4=>0x01,0x5=>0xff,0x6=>0x3c,0x7=>0xff),
+            memory!(0x0=>0x76,0x1=>0x3C,0x2=>0x76,0x3=>0x18,0x4=>0x01,0x5=>0x76,0x6=>0x3c,0x7=>0x76),
             4
         )
     ];
-
-    //INC A [- * 0 *]
+    // ANCHOR 0x3C | INC A | [Z 0 H -] | 1 | 4 
     test_case![
         Ox3C_with_overflow
             | (
-                registers!(a:0xFF,f: SET_N | SET_C | SET_N),
-                memory!(0x0=>0x3c,0x1=>0xff),
+                registers!(a:0xFF,f: SET_N | SET_C),
+                memory!(0x0=>0x3c,0x1=>0x76),
                 0
             ),
         (
             registers!(a:0x00,pc:2,f:SET_H | SET_Z | SET_C),
-            memory!(0x0=>0x3c,0x1=>0xff),
+            memory!(0x0=>0x3c,0x1=>0x76),
             4
         )
     ];
-
-    //INC A [- * 0 *]
     test_case![
         Ox3C_without_overflow
             | (
                 registers!(a:0x0E,f:SET_C | SET_H | SET_N | SET_Z),
-                memory!(0x0=>0x3C,0x1=>0xFF),
+                memory!(0x0=>0x3C,0x1=>0x76),
                 0
             ),
         (
             registers!(a:0x0F,f:SET_C,pc:2),
-            memory!(0x0=>0x3C,0x1=>0xFF),
+            memory!(0x0=>0x3C,0x1=>0x76),
             4
         )
     ];
-
-    // LD INTRUCTIONS //
-    //LD A d8
+    // SECTION 8 Bit Load Operations
+    // ANCHOR 0x3E | LD A, d8 | [- - - -] | 2 | 8
     test_case![
-        Ox3E | (registers!(), memory!(0x0=>0x3E,0x1=>0xFE,0x2=>0xFF), 0),
+        Ox3E | (registers!(), memory!(0x0=>0x3E,0x1=>0xFE,0x2=>0x76), 0),
         (
             registers!(a:0xFE,pc:3),
-            memory!(0x0=>0x3E,0x1=>0xFE,0x2=>0xFF),
+            memory!(0x0=>0x3E,0x1=>0xFE,0x2=>0x76),
             8
         )
     ];
-
+    // ANCHOR 0x06 | LD B, d8 | [- - - -] | 2 | 8
     test_case![
-        Ox06 | (registers!(), memory!(0x0=>0x06,0x1=>0xFE,0x2=>0xFF), 0),
+        Ox06 | 
+        (
+            registers!(), 
+            memory!(0x0=>0x06,0x1=>0xFE,0x2=>0x76), 
+            0
+        ),
         (
             registers!(b:0xFE,pc:3),
-            memory!(0x0=>0x06,0x1=>0xFE,0x2=>0xFF),
+            memory!(0x0=>0x06,0x1=>0xFE,0x2=>0x76),
             8
         )
     ];
-
+    // ANCHOR 0x0E | LD E, d8 | [- - - -] | 2 | 8
     test_case![
-        Ox0E | (registers!(), memory!(0x0=>0x0E,0x1=>0xFE,0x2=>0xFF), 0),
+        Ox0E | (registers!(), memory!(0x0=>0x0E,0x1=>0xFE,0x2=>0x76), 0),
         (
             registers!(c:0xFE,pc:3),
-            memory!(0x0=>0x0E,0x1=>0xFE,0x2=>0xFF),
+            memory!(0x0=>0x0E,0x1=>0xFE,0x2=>0x76),
             8
         )
     ];
-
+    // ANCHOR 0x16 | LD D, d8 | [- - - -] | 2 | 8
     test_case![
-        Ox16 | (registers!(), memory!(0x0=>0x16,0x1=>0xFE,0x2=>0xFF), 0),
+        Ox16 | (registers!(), memory!(0x0=>0x16,0x1=>0xFE,0x2=>0x76), 0),
         (
             registers!(d:0xFE,pc:3),
-            memory!(0x0=>0x16,0x1=>0xFE,0x2=>0xFF),
+            memory!(0x0=>0x16,0x1=>0xFE,0x2=>0x76),
             8
         )
     ];
-
+    // ANCHOR 0x1E | LD E, d8 | [- - - -] | 2 | 8
     test_case![
-        Ox1E | (registers!(), memory!(0x0=>0x1E,0x1=>0xFE,0x2=>0xFF), 0),
+        Ox1E | (registers!(), memory!(0x0=>0x1E,0x1=>0xFE,0x2=>0x76), 0),
         (
             registers!(e:0xFE,pc:3),
-            memory!(0x0=>0x1E,0x1=>0xFE,0x2=>0xFF),
+            memory!(0x0=>0x1E,0x1=>0xFE,0x2=>0x76),
             8
         )
     ];
-
+    // ANCHOR 0x26 | LD (HL), d8 | [- - - -] | 2 | 8
     test_case![
-        Ox26 | (registers!(), memory!(0x0=>0x26,0x1=>0xFE,0x2=>0xFF), 0),
+        Ox26 | (registers!(), memory!(0x0=>0x26,0x1=>0xFE,0x2=>0x76), 0),
         (
             registers!(h:0xFE,pc:3),
-            memory!(0x0=>0x26,0x1=>0xFE,0x2=>0xFF),
+            memory!(0x0=>0x26,0x1=>0xFE,0x2=>0x76),
             8
         )
     ];
-
+    // ANCHOR 0x2E | LD L, d8 | [- - - -] | 2 | 8
     test_case![
-        Ox2E | (registers!(), memory!(0x0=>0x2E,0x1=>0xFE,0x2=>0xFF), 0),
+        Ox2E | (registers!(), memory!(0x0=>0x2E,0x1=>0xFE,0x2=>0x76), 0),
         (
             registers!(l:0xFE,pc:3),
-            memory!(0x0=>0x2E,0x1=>0xFE,0x2=>0xFF),
+            memory!(0x0=>0x2E,0x1=>0xFE,0x2=>0x76),
             8
         )
     ];
-
+    // ANCHOR 0x36 | LD (HL), d8 | [- - - -] | 2 | 12
     test_case![
         Ox36 | (
             registers!(h:0x01,l:0x00),
-            memory!(0x0=>0x36,0x1=>0xFE,0x2=>0xFF),
+            memory!(0x0=>0x36,0x1=>0xFE,0x2=>0x76),
             0
         ),
         (
             registers!(h:0x01,l:0x00,pc:3),
-            memory!(0x0=>0x36,0x1=>0xFE,0x2=>0xFF,0x100=>0xFE),
+            memory!(0x0=>0x36,0x1=>0xFE,0x2=>0x76,0x100=>0xFE),
             12
         )
     ];
+    // !SECTION
+    // ANCHOR 0x87 | ADD A, A | [Z 0 H C] | 1 | 4
     test_case![
-        Ox87_Zero | (registers!(a:0x0,f:SET_N), memory!(0x0=>0x87,0x1=>0xff), 0),
+        Ox87_Zero | (registers!(a:0x0,f:SET_N), memory!(0x0=>0x87,0x1=>0x76), 0),
         (
             registers!(a:0x0,f:SET_Z,pc:2),
-            memory!(0x0=>0x87,0x1=>0xff),
+            memory!(0x0=>0x87,0x1=>0x76),
             4
         )
     ];
     test_case![
-        Ox87_With_Half_Carry | (registers!(a:0x0f,f:SET_N), memory!(0x0=>0x87,0x1=>0xff), 0),
+        Ox87_With_Half_Carry | (registers!(a:0x0f,f:SET_N), memory!(0x0=>0x87,0x1=>0x76), 0),
         (
             registers!(a:0x1e,f:SET_H,pc:2),
-            memory!(0x0=>0x87,0x1=>0xff),
+            memory!(0x0=>0x87,0x1=>0x76),
             4
         )
     ];
     test_case![
-        Ox87_With_Carry | (registers!(a:0x80,f:SET_N), memory!(0x0=>0x87,0x1=>0xff), 0),
+        Ox87_With_Carry | (registers!(a:0x80,f:SET_N), memory!(0x0=>0x87,0x1=>0x76), 0),
         (
             registers!(a:0x00,f:SET_Z|SET_C,pc:2),
-            memory!(0x0=>0x87,0x1=>0xff),
+            memory!(0x0=>0x87,0x1=>0x76),
             4
         )
     ];
     test_case![
-        Ox87_With_Both_Carry | (registers!(a:0x88,f:SET_N), memory!(0x0=>0x87,0x1=>0xff), 0),
+        Ox87_With_Both_Carry | (registers!(a:0x88,f:SET_N), memory!(0x0=>0x87,0x1=>0x76), 0),
         (
             registers!(a:0x10,f:SET_H|SET_C,pc:2),
-            memory!(0x0=>0x87,0x1=>0xff),
+            memory!(0x0=>0x87,0x1=>0x76),
             4
         )
     ];
@@ -2100,12 +2218,12 @@ mod alu_intruction_tests {
         Ox80_Zero
             | (
                 registers!(a:0x0,b:0x0,f:SET_N),
-                memory!(0x0=>0x80,0x1=>0xff),
+                memory!(0x0=>0x80,0x1=>0x76),
                 0
             ),
         (
             registers!(a:0x0,f:SET_Z,pc:2),
-            memory!(0x0=>0x80,0x1=>0xff),
+            memory!(0x0=>0x80,0x1=>0x76),
             4
         )
     ];
@@ -2113,12 +2231,12 @@ mod alu_intruction_tests {
         Ox80_With_Half_Carry
             | (
                 registers!(a:0x0f,b:0x01,f:SET_N),
-                memory!(0x0=>0x80,0x1=>0xff),
+                memory!(0x0=>0x80,0x1=>0x76),
                 0
             ),
         (
             registers!(a:0x10,b:0x01,f:SET_H,pc:2),
-            memory!(0x0=>0x80,0x1=>0xff),
+            memory!(0x0=>0x80,0x1=>0x76),
             4
         )
     ];
@@ -2126,12 +2244,12 @@ mod alu_intruction_tests {
         Ox80_With_Carry
             | (
                 registers!(a:0xf0,b:0x10,f:SET_N),
-                memory!(0x0=>0x80,0x1=>0xff),
+                memory!(0x0=>0x80,0x1=>0x76),
                 0
             ),
         (
             registers!(a:0x00,b:0x10,f:SET_Z|SET_C,pc:2),
-            memory!(0x0=>0x80,0x1=>0xff),
+            memory!(0x0=>0x80,0x1=>0x76),
             4
         )
     ];
@@ -2139,13 +2257,525 @@ mod alu_intruction_tests {
         Ox80_With_Both_Carry
             | (
                 registers!(a:0xff,b:0x01,f:SET_N),
-                memory!(0x0=>0x80,0x1=>0xff),
+                memory!(0x0=>0x80,0x1=>0x76),
                 0
             ),
         (
             registers!(a:0x00,b:0x01,f:SET_H|SET_C|SET_Z,pc:2),
-            memory!(0x0=>0x80,0x1=>0xff),
+            memory!(0x0=>0x80,0x1=>0x76),
             4
         )
     ];
+    // SECTION Stack Operations
+    // 0xC5 | PUSH BC | [- - - -] | 1 | 16
+    test_case![
+        OxC5 |
+        (
+            registers!(sp: 0xfffe,b:0x01,c:0x01),
+            memory!(0x0=>0xC5,0x1=>0x76),
+            0
+        ),
+        (
+            registers!(sp: 0xfffc,b:0x01,c:0x01,pc:0x02),
+            memory!(0x0=>0xC5,0x1=>0x76,0xFFFC=>0x01,0xFFFD=>0x01),
+            16
+        )
+    ];
+    // 0xD5 | PUSH DE | [- - - -] | 1 | 16
+    test_case![
+        OxD5 |
+        (
+            registers!(sp: 0xfffe,d:0x01,e:0x01),
+            memory!(0x0=>0xD5,0x1=>0x76),
+            0
+        ),
+        (
+            registers!(sp: 0xfffc,d:0x01,e:0x01,pc:0x02),
+            memory!(0x0=>0xD5,0x1=>0x76,0xFFFC=>0x01,0xFFFD=>0x01),
+            16
+        )
+    ];
+    // 0xE5 | PUSH HL | [- - - -] | 1 | 16
+    test_case![
+        OxE5 |
+        (
+            registers!(sp: 0xfffe,h:0x01,l:0x01),
+            memory!(0x0=>0xE5,0x1=>0x76),
+            0
+        ),
+        (
+            registers!(sp: 0xfffc,h:0x01,l:0x01,pc:0x02),
+            memory!(0x0=>0xE5,0x1=>0x76,0xFFFC=>0x01,0xFFFD=>0x01),
+            16
+        )
+    ];
+    // 0xF5 | PUSH AF | [- - - -] | 1 | 16
+    test_case![
+        OxF5 |
+        (
+            registers!(sp: 0xfffe,a:0x01,f:0x01),
+            memory!(0x0=>0xF5,0x1=>0x76),
+            0
+        ),
+        (
+            registers!(sp: 0xfffc,a:0x01,f:0x01,pc:0x02),
+            memory!(0x0=>0xF5,0x1=>0x76,0xFFFC=>0x01,0xFFFD=>0x01),
+            16
+        )
+    ];
+    // 0xC1 | POP BC | [- - - -] | 1 | 12 
+    test_case![
+        OxC1 |
+        (
+            registers!(sp:0xFFFC),
+            memory!(0x0=>0xC1,0x1=>0x76,0xFFFC=>0x01,0xFFFD=>0x02),
+            0
+        ),
+        (
+            registers!(sp:0xFFFE,b:0x02,c:0x01,pc:2),
+            memory!(0x0=>0xC1,0x1=>0x76,0xFFFC=>0x01,0xFFFD=>0x02),
+            12
+        )
+    ];
+    // 0xD1 | POP DE | [- - - -] | 1 | 12 
+    test_case![
+        OxD1 |
+        (
+            registers!(sp:0xFFFC),
+            memory!(0x0=>0xD1,0x1=>0x76,0xFFFC=>0x01,0xFFFD=>0x02),
+            0
+        ),
+        (
+            registers!(sp:0xFFFE,d:0x02,e:0x01,pc:2),
+            memory!(0x0=>0xD1,0x1=>0x76,0xFFFC=>0x01,0xFFFD=>0x02),
+            12
+        )
+    ];
+    // 0xE1 | POP HL | [- - - -] | 1 | 12 
+    test_case![
+        OxE1 |
+        (
+            registers!(sp:0xFFFC),
+            memory!(0x0=>0xE1,0x1=>0x76,0xFFFC=>0x01,0xFFFD=>0x02),
+            0
+        ),
+        (
+            registers!(sp:0xFFFE,h:0x02,l:0x01,pc:2),
+            memory!(0x0=>0xE1,0x1=>0x76,0xFFFC=>0x01,0xFFFD=>0x02),
+            12
+        )
+    ];
+    // 0xF1 | POP AF | [- - - -] | 1 | 12 
+    test_case![
+        OxF1 |
+        (
+            registers!(sp:0xFFFC),
+            memory!(0x0=>0xF1,0x1=>0x76,0xFFFC=>0x01,0xFFFD=>0x02),
+            0
+        ),
+        (
+            registers!(sp:0xFFFE,a:0x02,f:0x01,pc:2),
+            memory!(0x0=>0xF1,0x1=>0x76,0xFFFC=>0x01,0xFFFD=>0x02),
+            12
+        )
+    ];
+    // !SECTION
+
+    // SECTION CALL Instructions
+    // ANCHOR 0xCD | CALL a16 | [- - - -] | 3 | 24
+    test_case![
+        OxCD | 
+        (
+            registers!(sp:0xFFFE),
+            memory!(0x0=>0xCD,0x1=>0xFE,0x2=>0x7F,0x7FFE=>0x76),
+            0
+        ),
+        (
+            registers!(sp:0xFFFC,pc:0x7FFF),
+            memory!(0x0=>0xCD,0x1=>0xFE,0x2=>0x7F,0x7FFE=>0x76,0xFFFC=>0x03),
+            24
+        )
+    ];
+    // ANCHOR 0XC4 | CALL NZ, a16 | [- - - -] | 1 | 24/12
+    test_case![
+        OxC4_with_Z_reset |
+        (
+            registers!(sp:0xFFFE),
+            memory!(0x0=>0xC4,0x1=>0xFE,0x2=>0x7F,0x3=>0x76,0x7FFE=>0x76),
+            0
+        ),
+        (
+            registers!(sp:0xFFFC,pc:0x7FFF),
+            memory!(0x0=>0xC4,0x1=>0xFE,0x2=>0x7F,0x3=>0x76,0x7FFE=>0x76,0xFFFC=>0x03),
+            24
+        )
+    ];
+    test_case![
+        OxC4_with_Z_set |
+        (
+            registers!(sp:0xFFFE,f: SET_Z),
+            memory!(0x0=>0xC4,0x1=>0xFE,0x2=>0x7F,0x3=>0x76,0x7FFE=>0x76),
+            0
+        ),
+        (
+            registers!(sp:0xFFFE,f: SET_Z,pc:0x04),
+            memory!(0x0=>0xC4,0x1=>0xFE,0x2=>0x7F,0x3=>0x76,0x7FFE=>0x76),
+            12
+        )
+    ];
+    // ANCHOR 0xCC | CALL Z, a16 | [- - - -] | 1 | 24/12
+    test_case![
+        OxCC_with_Z_set |
+        (
+            registers!(sp:0xFFFE,f:SET_Z),
+            memory!(0x0=>0xCC,0x1=>0xFE,0x2=>0x7F,0x3=>0x76,0x7FFE=>0x76),
+            0
+        ),
+        (
+            registers!(sp:0xFFFC,f:SET_Z,pc:0x7FFF),
+            memory!(0x0=>0xCC,0x1=>0xFE,0x2=>0x7F,0x3=>0x76,0x7FFE=>0x76,0xFFFC=>0x03),
+            24
+        )
+    ];
+    test_case![
+        OxCC_with_Z_reset |
+        (
+            registers!(sp:0xFFFE),
+            memory!(0x0=>0xCC,0x1=>0xFE,0x2=>0x7F,0x3=>0x76,0x7FFE=>0x76),
+            0
+        ),
+        (
+            registers!(sp:0xFFFE,pc:0x04),
+            memory!(0x0=>0xCC,0x1=>0xFE,0x2=>0x7F,0x3=>0x76,0x7FFE=>0x76),
+            12
+        )
+    ];
+    // ANCHOR 0xD4 | CALL NC, a16 | [- - - -] | 1 | 24/12
+    test_case![
+        OxD4_with_C_reset |
+        (
+            registers!(sp:0xFFFE),
+            memory!(0x0=>0xD4,0x1=>0xFE,0x2=>0x7F,0x3=>0x76,0x7FFE=>0x76),
+            0
+        ),
+        (
+            registers!(sp:0xFFFC,pc:0x7FFF),
+            memory!(0x0=>0xD4,0x1=>0xFE,0x2=>0x7F,0x3=>0x76,0x7FFE=>0x76,0xFFFC=>0x03),
+            24
+        )
+    ];
+    test_case![
+        OxD4_with_C_set |
+        (
+            registers!(sp:0xFFFE,f: SET_C),
+            memory!(0x0=>0xD4,0x1=>0xFE,0x2=>0x7F,0x3=>0x76,0x7FFE=>0x76),
+            0
+        ),
+        (
+            registers!(sp:0xFFFE,f: SET_C,pc:0x04),
+            memory!(0x0=>0xD4,0x1=>0xFE,0x2=>0x7F,0x3=>0x76,0x7FFE=>0x76),
+            12
+        )
+    ];
+    // ANCHOR 0xDC | CALL C, a16 | [- - - -] | 1 | 24/12
+    test_case![
+        OxDC_with_C_set |
+        (
+            registers!(sp:0xFFFE,f:SET_C),
+            memory!(0x0=>0xDC,0x1=>0xFE,0x2=>0x7F,0x3=>0x76,0x7FFE=>0x76),
+            0
+        ),
+        (
+            registers!(sp:0xFFFC,f:SET_C,pc:0x7FFF),
+            memory!(0x0=>0xDC,0x1=>0xFE,0x2=>0x7F,0x3=>0x76,0x7FFE=>0x76,0xFFFC=>0x03),
+            24
+        )
+    ];
+    test_case![
+        OxDC_with_C_reset |
+        (
+            registers!(sp:0xFFFE),
+            memory!(0x0=>0xDC,0x1=>0xFE,0x2=>0x7F,0x3=>0x76,0x7FFE=>0x76),
+            0
+        ),
+        (
+            registers!(sp:0xFFFE,pc:0x04),
+            memory!(0x0=>0xDC,0x1=>0xFE,0x2=>0x7F,0x3=>0x76,0x7FFE=>0x76),
+            12
+        )
+    ];
+    // !SECTION
+    
+    // SECTION Return Instructions
+    // ANCHOR 0XC9 | RET | [- - - -] | 1 | 16
+    test_case![
+        OxC9 |
+        (
+            registers!(sp:0xFFFC),
+            memory!(0x0=>0xC9,0x1=>0x76,0x7FFF=>0x76,0xFFFC=>0xFF,0xFFFD=>0x7F),
+            0
+        ),
+        (
+            registers!(sp:0xFFFE,pc:0x8000),
+            memory!(0x0=>0xC9,0x1=>0x76,0x7FFF=>0x76,0xFFFC=>0xFF,0xFFFD=>0x7F),
+            16
+        )
+    ];
+    // ANCHOR 0xC0 | RET NZ | [- - - -] | 1 | 20/8
+    test_case![
+        OxC0_with_Z_reset |
+        (
+            registers!(sp:0xFFFC),
+            memory!(0x0=>0xC0,0x1=>0x76,0x7FFF=>0x76,0xFFFC=>0xFF,0xFFFD=>0x7F),
+            0
+        ),
+        (
+            registers!(sp:0xFFFE,pc:0x8000),
+            memory!(0x0=>0xC0,0x1=>0x76,0x7FFF=>0x76,0xFFFC=>0xFF,0xFFFD=>0x7F),
+            20
+        )
+    ];
+    test_case![
+        OxC0_with_Z_set |
+        (
+            registers!(sp:0xFFFC,f:SET_Z),
+            memory!(0x0=>0xC0,0x1=>0x76,0x7FFF=>0x76,0xFFFC=>0xFF,0xFFFD=>0x7F),
+            0
+        ),
+        (
+            registers!(sp:0xFFFC,f:SET_Z,pc:0x02),
+            memory!(0x0=>0xC0,0x1=>0x76,0x7FFF=>0x76,0xFFFC=>0xFF,0xFFFD=>0x7F),
+            8
+        )
+    ];
+    // ANCHOR 0xC8 | RET Z | [- - - -] | 1 | 20/8
+    test_case![
+        OxC8_with_Z_set |
+        (
+            registers!(sp:0xFFFC,f:SET_Z),
+            memory!(0x0=>0xC8,0x1=>0x76,0x7FFF=>0x76,0xFFFC=>0xFF,0xFFFD=>0x7F),
+            0
+        ),
+        (
+            registers!(sp:0xFFFE,f:SET_Z,pc:0x8000),
+            memory!(0x0=>0xC8,0x1=>0x76,0x7FFF=>0x76,0xFFFC=>0xFF,0xFFFD=>0x7F),
+            20
+        )
+    ];
+    test_case![
+        OxC8_with_Z_reset |
+        (
+            registers!(sp:0xFFFC),
+            memory!(0x0=>0xC8,0x1=>0x76,0x7FFF=>0x76,0xFFFC=>0xFF,0xFFFD=>0x7F),
+            0
+        ),
+        (
+            registers!(sp:0xFFFC,pc:0x02),
+            memory!(0x0=>0xC8,0x1=>0x76,0x7FFF=>0x76,0xFFFC=>0xFF,0xFFFD=>0x7F),
+            8
+        )
+    ];
+    // ANCHOR 0xD0 | RET NC | [- - - -] | 1 | 20/8
+    test_case![
+        OxD0_with_C_reset |
+        (
+            registers!(sp:0xFFFC),
+            memory!(0x0=>0xD0,0x1=>0x76,0x7FFF=>0x76,0xFFFC=>0xFF,0xFFFD=>0x7F),
+            0
+        ),
+        (
+            registers!(sp:0xFFFE,pc:0x8000),
+            memory!(0x0=>0xD0,0x1=>0x76,0x7FFF=>0x76,0xFFFC=>0xFF,0xFFFD=>0x7F),
+            20
+        )
+    ];
+    test_case![
+        OxC0_with_C_set |
+        (
+            registers!(sp:0xFFFC,f:SET_C),
+            memory!(0x0=>0xD0,0x1=>0x76,0x7FFF=>0x76,0xFFFC=>0xFF,0xFFFD=>0x7F),
+            0
+        ),
+        (
+            registers!(sp:0xFFFC,f:SET_C,pc:0x02),
+            memory!(0x0=>0xD0,0x1=>0x76,0x7FFF=>0x76,0xFFFC=>0xFF,0xFFFD=>0x7F),
+            8
+        )
+    ];
+    // ANCHOR 0xD8 | RET C | [- - - -] | 1 | 20/8
+    test_case![
+        OxD8_with_C_set |
+        (
+            registers!(sp:0xFFFC,f:SET_C),
+            memory!(0x0=>0xD8,0x1=>0x76,0x7FFF=>0x76,0xFFFC=>0xFF,0xFFFD=>0x7F),
+            0
+        ),
+        (
+            registers!(sp:0xFFFE,f:SET_C,pc:0x8000),
+            memory!(0x0=>0xD8,0x1=>0x76,0x7FFF=>0x76,0xFFFC=>0xFF,0xFFFD=>0x7F),
+            20
+        )
+    ];
+    test_case![
+        OxD8_with_Z_reset |
+        (
+            registers!(sp:0xFFFC),
+            memory!(0x0=>0xD8,0x1=>0x76,0x7FFF=>0x76,0xFFFC=>0xFF,0xFFFD=>0x7F),
+            0
+        ),
+        (
+            registers!(sp:0xFFFC,pc:0x02),
+            memory!(0x0=>0xD8,0x1=>0x76,0x7FFF=>0x76,0xFFFC=>0xFF,0xFFFD=>0x7F),
+            8
+        )
+    ];
+    // ANCHOR RETI | [- - - -] | 1 | 16
+    #[test]
+    fn OxD9(){
+        let current_state = (            
+            registers!(sp:0xFFFC),
+            memory!(0x0=>0xD9,0x1=>0x76,0x7FFF=>0x76,0xFFFC=>0xFF,0xFFFD=>0x7F),
+            0,
+            false
+        );
+        let expected_state = (            
+            registers!(sp:0xFFFE,pc:0x8000),
+            memory!(0x0=>0xD9,0x1=>0x76,0x7FFF=>0x76,0xFFFC=>0xFF,0xFFFD=>0x7F),
+            16,
+            true
+        );
+
+        let memory = Arc::new(Mutex::new(current_state.1));
+        let memory_1 = Arc::clone(&memory);
+        let mut cpu = CPU {
+            registers: current_state.0,
+            memory: memory,
+            cycle: current_state.2,
+            state: CPUState::Active,
+            ime: false,
+        };
+        while cpu.state == CPUState::Active{
+            cpu.execute();
+        }
+
+        let mem = *cpu.memory.lock().unwrap();
+        assert_eq!((cpu.get_registers(), mem, cpu.get_cycles(), cpu.ime),expected_state);
+    }
+    // !SECTION
+
+    // SECTION Reset Instructions
+    // ANCHOR 0xC7 | RST 00H | [- - - -] | 1 | 16
+    test_case![
+        OxC7 |
+        (
+            registers!(sp:0xFFFE,pc:0x04),
+            memory!(0x0=>0x76,0x04=>0xC7,0x05=>0x76),
+            0
+        ),
+        (
+            registers!(sp:0xFFFC,pc:0x01),
+            memory!(0x0=>0x76,0x04=>0xC7,0x05=>0x76,0xFFFC=>0x05),
+            16
+        )
+    ];
+    // ANCHOR 0xCF | RST 08H | [- - - -] | 1 | 16
+    test_case![
+        OxCF |
+        (
+            registers!(sp:0xFFFE,pc:0x04),
+            memory!(0x08=>0x76,0x04=>0xCF,0x05=>0x76),
+            0
+        ),
+        (
+            registers!(sp:0xFFFC,pc:0x09),
+            memory!(0x08=>0x76,0x04=>0xCF,0x05=>0x76,0xFFFC=>0x05),
+            16
+        )
+    ];
+    // ANCHOR 0xD7 | RST 10H | [- - - -] | 1 | 16
+    test_case![
+        OxD7 |
+        (
+            registers!(sp:0xFFFE,pc:0x04),
+            memory!(0x10=>0x76,0x04=>0xD7,0x05=>0x76),
+            0
+        ),
+        (
+            registers!(sp:0xFFFC,pc:0x11),
+            memory!(0x10=>0x76,0x04=>0xD7,0x05=>0x76,0xFFFC=>0x05),
+            16
+        )
+    ];
+    // ANCHOR 0xDF | RST 18H | [- - - -] | 1 | 16
+    test_case![
+        OxDF |
+        (
+            registers!(sp:0xFFFE,pc:0x04),
+            memory!(0x18=>0x76,0x04=>0xDF,0x05=>0x76),
+            0
+        ),
+        (
+            registers!(sp:0xFFFC,pc:0x19),
+            memory!(0x18=>0x76,0x04=>0xDF,0x05=>0x76,0xFFFC=>0x05),
+            16
+        )
+    ];
+    // ANCHOR 0xE7 | RST 20H | [- - - -] | 1 | 16
+    test_case![
+        OxE7 |
+        (
+            registers!(sp:0xFFFE,pc:0x04),
+            memory!(0x20=>0x76,0x04=>0xE7,0x05=>0x76),
+            0
+        ),
+        (
+            registers!(sp:0xFFFC,pc:0x21),
+            memory!(0x20=>0x76,0x04=>0xE7,0x05=>0x76,0xFFFC=>0x05),
+            16
+        )
+    ];
+    // ANCHOR 0xEF | RST 28H | [- - - -] | 1 | 16
+    test_case![
+        OxEF |
+        (
+            registers!(sp:0xFFFE,pc:0x04),
+            memory!(0x28=>0x76,0x04=>0xEF,0x05=>0x76),
+            0
+        ),
+        (
+            registers!(sp:0xFFFC,pc:0x29),
+            memory!(0x28=>0x76,0x04=>0xEF,0x05=>0x76,0xFFFC=>0x05),
+            16
+        )
+    ];
+    // ANCHOR 0xF7 | RST 30H | [- - - -] | 1 | 16
+    test_case![
+        OxF7 |
+        (
+            registers!(sp:0xFFFE,pc:0x04),
+            memory!(0x30=>0x76,0x04=>0xF7,0x05=>0x76),
+            0
+        ),
+        (
+            registers!(sp:0xFFFC,pc:0x31),
+            memory!(0x30=>0x76,0x04=>0xF7,0x05=>0x76,0xFFFC=>0x05),
+            16
+        )
+    ];
+    // ANCHOR 0xFF | RST 38H | [- - - -] | 1 | 16 
+    test_case![
+        OxFF |
+        (
+            registers!(sp:0xFFFE,pc:0x04),
+            memory!(0x38=>0x76,0x04=>0xFF,0x05=>0x76),
+            0
+        ),
+        (
+            registers!(sp:0xFFFC,pc:0x39),
+            memory!(0x38=>0x76,0x04=>0xFF,0x05=>0x76,0xFFFC=>0x05),
+            16
+        )
+    ];
+    // !SECTION
 }
+// !SECTION
