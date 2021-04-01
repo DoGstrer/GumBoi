@@ -1596,50 +1596,42 @@ impl CPU {
             // SECTION Reset
             // ANCHOR RST 00H | [- - - -] | 1 | 16
             0xC7 => {
-                self.push(self.registers.pc);
-                self.registers.pc = 0x00;
+                self.rst(0x00);
                 self.cycle = 16;
             }
             // ANCHOR RST 08H | [- - - -] | 1 | 16
             0xCF => {
-                self.push(self.registers.pc);
-                self.registers.pc = 0x08;
+                self.rst(0x08);
                 self.cycle = 16;
             }
             // ANCHOR RST 10H | [- - - -] | 1 | 16
             0xD7 => {
-                self.push(self.registers.pc);
-                self.registers.pc = 0x10;
+                self.rst(0x10);
                 self.cycle = 16;
             }
             // ANCHOR RST 18H | [- - - -] | 1 | 16
             0xDF => {
-                self.push(self.registers.pc);
-                self.registers.pc = 0x18;
+                self.rst(0x18);
                 self.cycle = 16;
             }
             // ANCHOR RST 20H | [- - - -] | 1 | 16
             0xE7 => {
-                self.push(self.registers.pc);
-                self.registers.pc = 0x20;
+                self.rst(0x20);
                 self.cycle = 16;
             }
             // ANCHOR RST 28H | [- - - -] | 1 | 16
             0xEF => {
-                self.push(self.registers.pc);
-                self.registers.pc = 0x28;
+                self.rst(0x28);
                 self.cycle = 16;
             }
             // ANCHOR RST 30H | [- - - -] | 1 | 16
             0xF7 => {
-                self.push(self.registers.pc);
-                self.registers.pc = 0x30;
+                self.rst(0x30);
                 self.cycle = 16;
             }
             // ANCHOR RST 38H | [- - - -] | 1 | 16 
             0xFF => {
-                self.push(self.registers.pc);
-                self.registers.pc = 0x38;
+                self.rst(0x38);
                 self.cycle = 16;
             }
             // !SECTION
@@ -1649,6 +1641,39 @@ impl CPU {
         // !SECTION
     }
     //[Z 0 H C]
+
+    fn print_flags(&self) {
+        println!(
+            "Z:{} N:{} H:{} C:{}",
+            self.registers.get_z(),
+            self.registers.get_n(),
+            self.registers.get_h(),
+            self.registers.get_c()
+        );
+    }
+    pub fn get_registers(&self) -> Registers {
+        self.registers
+    }
+    pub fn get_cycles(&self) -> usize {
+        self.cycle
+    }
+    pub fn get_state(&self) -> CPUState {
+        self.state
+    }
+    fn rst(&mut self,addr:u16){
+        self.push(self.registers.pc);
+        self.registers.pc = addr;
+    }
+}
+// SECTION CPU ALU Trait
+trait ALU{
+    fn add8(&mut self, a: u8, b: u8, carry: bool) -> u8;
+    fn add16(&mut self, a: u16, b: u16, carry: bool) -> u16;
+    fn sub8(&mut self, a: u8, b: u8, carry: bool) -> u8;
+    fn sub16(&mut self, a: u16, b: u16, carry: bool) -> u16;
+    fn daa(&mut self, a: u8) -> u8;
+}
+impl ALU for CPU{
     fn add8(&mut self, a: u8, b: u8, carry: bool) -> u8 {
         let mut carry_val: u8 = 0;
         if carry == true && (self.registers.is_set_c()) {
@@ -1792,26 +1817,8 @@ impl CPU {
             _ => byte,
         }
     }
-    fn print_flags(&self) {
-        println!(
-            "Z:{} N:{} H:{} C:{}",
-            self.registers.get_z(),
-            self.registers.get_n(),
-            self.registers.get_h(),
-            self.registers.get_c()
-        );
-    }
-    pub fn get_registers(&self) -> Registers {
-        self.registers
-    }
-    pub fn get_cycles(&self) -> usize {
-        self.cycle
-    }
-    pub fn get_state(&self) -> CPUState {
-        self.state
-    }
 }
-
+// !SECTION
 // SECTION CPU Stack Trait
 pub trait Stack{
     fn push(&mut self,a16: u16);
