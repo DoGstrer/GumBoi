@@ -26,17 +26,17 @@ pub struct CPU {
     memory: Arc<Mutex<Memory>>,
     cycle: usize,
     state: CPUState,
-    ime: bool // Interrupt Master Enable
+    ime: Arc<Mutex<bool>> // Interrupt Master Enable
 }
 
 impl CPU {
-    pub fn new(memory: Arc<Mutex<Memory>>) -> CPU {
+    pub fn new(memory: Arc<Mutex<Memory>>,ime: Arc<Mutex<bool>>) -> CPU {
         CPU {
             registers: Registers::new(),
             cycle: 0,
             state: CPUState::Active,
             memory: memory,
-            ime: false,
+            ime: ime,
         }
     }
     fn get_next_byte8(&mut self) -> u8 {
@@ -1588,7 +1588,7 @@ impl CPU {
             0xD9 => {
                 byte = self.pop();
                 self.registers.pc = byte;
-                self.ime = true;
+                *self.ime.lock().unwrap() = true;
                 self.cycle = 16;
             }
             // !SECTION
@@ -1660,7 +1660,7 @@ impl CPU {
     pub fn get_state(&self) -> CPUState {
         self.state
     }
-    fn rst(&mut self,addr:u16){
+    pub fn rst(&mut self,addr:u16){
         self.push(self.registers.pc);
         self.registers.pc = addr;
     }
@@ -1915,12 +1915,14 @@ mod cpu_intruction_tests {
     fn get_next_state(current_state: (Registers, Memory, usize)) -> (Registers, Memory, usize) {
         let memory = Arc::new(Mutex::new(current_state.1));
         let memory_1 = Arc::clone(&memory);
+
+        let ime = Arc::new(Mutex::new(false));
         let mut cpu = CPU {
             registers: current_state.0,
             memory: memory,
             cycle: current_state.2,
             state: CPUState::Active,
-            ime: false,
+            ime: ime,
         };
         while cpu.state == CPUState::Active{
             cpu.execute();
@@ -2654,19 +2656,21 @@ mod cpu_intruction_tests {
 
         let memory = Arc::new(Mutex::new(current_state.1));
         let memory_1 = Arc::clone(&memory);
+        let ime = Arc::new(Mutex::new(false));
         let mut cpu = CPU {
             registers: current_state.0,
             memory: memory,
             cycle: current_state.2,
             state: CPUState::Active,
-            ime: false,
+            ime: ime,
         };
         while cpu.state == CPUState::Active{
             cpu.execute();
         }
 
         let mem = *cpu.memory.lock().unwrap();
-        assert_eq!((cpu.get_registers(), mem, cpu.get_cycles(), cpu.ime),expected_state);
+        let ime_ = *cpu.ime.lock().unwrap();
+        assert_eq!((cpu.get_registers(), mem, cpu.get_cycles(), ime_),expected_state);
     }
     // !SECTION
 
