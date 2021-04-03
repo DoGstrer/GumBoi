@@ -7,7 +7,7 @@ sub16 : 7 instructions
 
 // ANCHOR <Opcode> | <Instruction> | <[Z N H C]> | <Bytes> | <Cycles>
 
-use std::sync::{Mutex,Arc};
+use std::sync::{Arc, Mutex};
 
 use super::memory::Memory;
 use super::registers::Flag;
@@ -26,11 +26,11 @@ pub struct CPU {
     memory: Arc<Mutex<Memory>>,
     cycle: usize,
     state: CPUState,
-    ime: Arc<Mutex<bool>> // Interrupt Master Enable
+    ime: Arc<Mutex<bool>>, // Interrupt Master Enable
 }
 
 impl CPU {
-    pub fn new(memory: Arc<Mutex<Memory>>,ime: Arc<Mutex<bool>>) -> CPU {
+    pub fn new(memory: Arc<Mutex<Memory>>, ime: Arc<Mutex<bool>>) -> CPU {
         CPU {
             registers: Registers::new(),
             cycle: 0,
@@ -40,7 +40,7 @@ impl CPU {
         }
     }
     fn get_next_byte8(&mut self) -> u8 {
-        let mut byte:u8 = self.memory.lock().unwrap().get_addr(self.registers.pc);
+        let mut byte: u8 = self.memory.lock().unwrap().get_addr(self.registers.pc);
         self.registers.pc += 1;
         byte
     }
@@ -60,7 +60,7 @@ impl CPU {
         let mut byte8: u8 = 0x0;
         let mut flag: bool = false;
 
-        self.registers.pc+=1;
+        self.registers.pc += 1;
         // SECTION CPU Instructions
         match opcode {
             //8 bit LD
@@ -131,7 +131,11 @@ impl CPU {
                 self.cycle = 4;
             }
             0x7E => {
-                self.registers.a = self.memory.lock().unwrap().get_addr(self.registers.get_hl());
+                self.registers.a = self
+                    .memory
+                    .lock()
+                    .unwrap()
+                    .get_addr(self.registers.get_hl());
                 self.cycle = 8;
             }
             0x40 => {
@@ -159,7 +163,11 @@ impl CPU {
                 self.cycle = 4;
             }
             0x46 => {
-                self.registers.b = self.memory.lock().unwrap().get_addr(self.registers.get_hl());
+                self.registers.b = self
+                    .memory
+                    .lock()
+                    .unwrap()
+                    .get_addr(self.registers.get_hl());
                 self.cycle = 8;
             }
             0x48 => {
@@ -187,7 +195,11 @@ impl CPU {
                 self.cycle = 4;
             }
             0x4E => {
-                self.registers.c = self.memory.lock().unwrap().get_addr(self.registers.get_hl());
+                self.registers.c = self
+                    .memory
+                    .lock()
+                    .unwrap()
+                    .get_addr(self.registers.get_hl());
                 self.cycle = 8;
             }
             0x50 => {
@@ -215,7 +227,11 @@ impl CPU {
                 self.cycle = 4;
             }
             0x56 => {
-                self.registers.d = self.memory.lock().unwrap().get_addr(self.registers.get_hl());
+                self.registers.d = self
+                    .memory
+                    .lock()
+                    .unwrap()
+                    .get_addr(self.registers.get_hl());
                 self.cycle = 8;
             }
             0x58 => {
@@ -243,7 +259,11 @@ impl CPU {
                 self.cycle = 4;
             }
             0x5E => {
-                self.registers.e = self.memory.lock().unwrap().get_addr(self.registers.get_hl());
+                self.registers.e = self
+                    .memory
+                    .lock()
+                    .unwrap()
+                    .get_addr(self.registers.get_hl());
                 self.cycle = 8;
             }
             0x60 => {
@@ -271,7 +291,11 @@ impl CPU {
                 self.cycle = 4;
             }
             0x66 => {
-                self.registers.h = self.memory.lock().unwrap().get_addr(self.registers.get_hl());
+                self.registers.h = self
+                    .memory
+                    .lock()
+                    .unwrap()
+                    .get_addr(self.registers.get_hl());
                 self.cycle = 8;
             }
             0x68 => {
@@ -299,52 +323,70 @@ impl CPU {
                 self.cycle = 4;
             }
             0x6E => {
-                self.registers.l = self.memory.lock().unwrap().get_addr(self.registers.get_hl());
+                self.registers.l = self
+                    .memory
+                    .lock()
+                    .unwrap()
+                    .get_addr(self.registers.get_hl());
                 self.cycle = 8;
             }
             0x70 => {
                 self.memory
-                    .lock().unwrap()
+                    .lock()
+                    .unwrap()
                     .set_addr(self.registers.get_hl(), self.registers.b);
                 self.cycle = 8;
             }
             0x71 => {
                 self.memory
-                    .lock().unwrap()
+                    .lock()
+                    .unwrap()
                     .set_addr(self.registers.get_hl(), self.registers.c);
                 self.cycle = 8;
             }
             0x72 => {
                 self.memory
-                    .lock().unwrap()
+                    .lock()
+                    .unwrap()
                     .set_addr(self.registers.get_hl(), self.registers.d);
                 self.cycle = 8;
             }
             0x73 => {
                 self.memory
-                    .lock().unwrap()
+                    .lock()
+                    .unwrap()
                     .set_addr(self.registers.get_hl(), self.registers.e);
                 self.cycle = 8;
             }
             0x74 => {
                 self.memory
-                    .lock().unwrap()
+                    .lock()
+                    .unwrap()
                     .set_addr(self.registers.get_hl(), self.registers.h);
                 self.cycle = 8;
             }
             0x75 => {
                 self.memory
-                    .lock().unwrap()
+                    .lock()
+                    .unwrap()
                     .set_addr(self.registers.get_hl(), self.registers.l);
                 self.cycle = 8;
             }
 
             0x0A => {
-                self.registers.a = self.memory.lock().unwrap().get_addr(self.registers.get_bc());
+                self.registers.a = self
+                    .memory
+                    .lock()
+                    .unwrap()
+                    .get_addr(self.registers.get_bc());
                 self.cycle = 8;
             }
             0x1A => {
-                self.registers.a = self.memory.lock().unwrap().get_addr(self.registers.get_de());
+                self.registers.a = self
+                    .memory
+                    .lock()
+                    .unwrap()
+                    .get_addr(self.registers.get_de());
                 self.cycle = 8;
             }
             0xFA => {
@@ -379,19 +421,22 @@ impl CPU {
             }
             0x02 => {
                 self.memory
-                    .lock().unwrap()
+                    .lock()
+                    .unwrap()
                     .set_addr(self.registers.get_bc(), self.registers.a);
                 self.cycle = 8;
             }
             0x12 => {
                 self.memory
-                    .lock().unwrap()
+                    .lock()
+                    .unwrap()
                     .set_addr(self.registers.get_de(), self.registers.a);
                 self.cycle = 8;
             }
             0x77 => {
                 self.memory
-                    .lock().unwrap()
+                    .lock()
+                    .unwrap()
                     .set_addr(self.registers.get_hl(), self.registers.a);
                 self.cycle = 8;
             }
@@ -401,35 +446,50 @@ impl CPU {
                 self.cycle = 16;
             }
             0xF2 => {
-                self.registers.a = self.memory.lock().unwrap().get_addr(0xFF00 | (self.registers.c as u16));
+                self.registers.a = self
+                    .memory
+                    .lock()
+                    .unwrap()
+                    .get_addr(0xFF00 | (self.registers.c as u16));
                 self.cycle = 8;
             }
             0xE2 => {
                 self.memory
-                    .lock().unwrap()
+                    .lock()
+                    .unwrap()
                     .set_addr(0xFF00 + (self.registers.c as u16), self.registers.a);
                 self.cycle = 8;
             }
             0x3A => {
-                self.registers.a = self.memory.lock().unwrap().get_addr(self.registers.get_hl());
+                self.registers.a = self
+                    .memory
+                    .lock()
+                    .unwrap()
+                    .get_addr(self.registers.get_hl());
                 self.registers.set_hl(self.registers.get_hl() - 0x1);
                 self.cycle = 8;
             }
             0x32 => {
                 self.memory
-                    .lock().unwrap()
+                    .lock()
+                    .unwrap()
                     .set_addr(self.registers.get_hl(), self.registers.a);
                 self.registers.set_hl(self.registers.get_hl() - 1);
                 self.cycle = 8;
             }
             0x2A => {
-                self.registers.a = self.memory.lock().unwrap().get_addr(self.registers.get_hl());
+                self.registers.a = self
+                    .memory
+                    .lock()
+                    .unwrap()
+                    .get_addr(self.registers.get_hl());
                 self.registers.set_hl(self.registers.get_hl() + 0x1);
                 self.cycle = 8;
             }
             0x22 => {
                 self.memory
-                    .lock().unwrap()
+                    .lock()
+                    .unwrap()
                     .set_addr(self.registers.get_hl(), self.registers.a);
                 self.registers.set_hl(self.registers.get_hl() + 0x0001);
                 self.cycle = 8;
@@ -437,13 +497,18 @@ impl CPU {
             0xE0 => {
                 byte8 = self.get_next_byte8();
                 self.memory
-                    .lock().unwrap()
+                    .lock()
+                    .unwrap()
                     .set_addr(0xFF00 + (byte8 as u16), self.registers.a);
                 self.cycle = 12;
             }
             0xF0 => {
                 byte8 = self.get_next_byte8();
-                self.registers.a = self.memory.lock().unwrap().get_addr(0xFF00 + (byte8 as u16));
+                self.registers.a = self
+                    .memory
+                    .lock()
+                    .unwrap()
+                    .get_addr(0xFF00 + (byte8 as u16));
                 self.cycle = 12;
             }
 
@@ -485,17 +550,19 @@ impl CPU {
             0x08 => {
                 byte = self.get_next_byte16();
                 self.memory
-                    .lock().unwrap()
+                    .lock()
+                    .unwrap()
                     .set_addr(byte, (self.registers.sp & 0x00ff) as u8);
                 self.memory
-                    .lock().unwrap()
+                    .lock()
+                    .unwrap()
                     .set_addr(byte + 1, (self.registers.sp >> 8) as u8);
                 self.cycle = 20;
             }
 
             // SECTION Stack Operations
             // SECTION PUSH
-            // 0xF5 -> PUSH AF | [- - - -] | 1 | 16 
+            // 0xF5 -> PUSH AF | [- - - -] | 1 | 16
             0xF5 => {
                 self.push(self.registers.get_af());
                 self.cycle = 16;
@@ -574,7 +641,11 @@ impl CPU {
                 self.cycle = 4;
             }
             0x86 => {
-                byte8 = self.memory.lock().unwrap().get_addr(self.registers.get_hl());
+                byte8 = self
+                    .memory
+                    .lock()
+                    .unwrap()
+                    .get_addr(self.registers.get_hl());
                 self.registers.a = self.add8(self.registers.a, byte8, false);
                 self.cycle = 8;
             }
@@ -614,7 +685,11 @@ impl CPU {
                 self.cycle = 4;
             }
             0x8E => {
-                byte8 = self.memory.lock().unwrap().get_addr(self.registers.get_hl());
+                byte8 = self
+                    .memory
+                    .lock()
+                    .unwrap()
+                    .get_addr(self.registers.get_hl());
                 self.registers.a = self.add8(self.registers.a, byte8, true);
                 self.cycle = 8;
             }
@@ -654,7 +729,11 @@ impl CPU {
                 self.cycle = 4;
             }
             0x96 => {
-                byte8 = self.memory.lock().unwrap().get_addr(self.registers.get_hl());
+                byte8 = self
+                    .memory
+                    .lock()
+                    .unwrap()
+                    .get_addr(self.registers.get_hl());
                 self.registers.a = self.sub8(self.registers.a, byte8, false);
                 self.cycle = 8;
             }
@@ -694,7 +773,11 @@ impl CPU {
                 self.cycle = 4;
             }
             0x9E => {
-                byte8 = self.memory.lock().unwrap().get_addr(self.registers.get_hl());
+                byte8 = self
+                    .memory
+                    .lock()
+                    .unwrap()
+                    .get_addr(self.registers.get_hl());
                 self.registers.a = self.sub8(self.registers.a, byte8, true);
                 self.cycle = 8;
             }
@@ -770,7 +853,11 @@ impl CPU {
                 self.cycle = 4;
             }
             0xA6 => {
-                self.registers.a &= self.memory.lock().unwrap().get_addr(self.registers.get_hl());
+                self.registers.a &= self
+                    .memory
+                    .lock()
+                    .unwrap()
+                    .get_addr(self.registers.get_hl());
                 self.registers.reset_flags();
                 self.registers.set_h();
                 if self.registers.a == 0x0 {
@@ -846,7 +933,11 @@ impl CPU {
                 self.cycle = 4;
             }
             0xB6 => {
-                self.registers.a |= self.memory.lock().unwrap().get_addr(self.registers.get_hl());
+                self.registers.a |= self
+                    .memory
+                    .lock()
+                    .unwrap()
+                    .get_addr(self.registers.get_hl());
                 self.registers.reset_flags();
                 if self.registers.a == 0x0 {
                     self.registers.set_z();
@@ -921,7 +1012,11 @@ impl CPU {
                 self.cycle = 4;
             }
             0xAE => {
-                self.registers.a ^= self.memory.lock().unwrap().get_addr(self.registers.get_hl());
+                self.registers.a ^= self
+                    .memory
+                    .lock()
+                    .unwrap()
+                    .get_addr(self.registers.get_hl());
                 self.registers.reset_flags();
                 if self.registers.a == 0x0 {
                     self.registers.set_z();
@@ -968,7 +1063,11 @@ impl CPU {
                 self.cycle = 4;
             }
             0xBE => {
-                byte8 = self.memory.lock().unwrap().get_addr(self.registers.get_hl());
+                byte8 = self
+                    .memory
+                    .lock()
+                    .unwrap()
+                    .get_addr(self.registers.get_hl());
                 self.sub8(self.registers.a, byte8, false);
                 self.cycle = 8;
             }
@@ -1059,10 +1158,15 @@ impl CPU {
             }
             0x34 => {
                 flag = self.registers.is_set_c();
-                byte8 = self.memory.lock().unwrap().get_addr(self.registers.get_hl());
+                byte8 = self
+                    .memory
+                    .lock()
+                    .unwrap()
+                    .get_addr(self.registers.get_hl());
                 byte8 = self.add8(byte8, 0x01, false);
                 self.memory
-                    .lock().unwrap()
+                    .lock()
+                    .unwrap()
                     .set_addr(self.registers.get_hl(), byte8);
                 if flag {
                     self.registers.set_c();
@@ -1145,10 +1249,15 @@ impl CPU {
             }
             0x35 => {
                 flag = self.registers.is_set_c();
-                byte8 = self.memory.lock().unwrap().get_addr(self.registers.get_hl());
+                byte8 = self
+                    .memory
+                    .lock()
+                    .unwrap()
+                    .get_addr(self.registers.get_hl());
                 byte8 = self.sub8(byte8, 0x01, false);
                 self.memory
-                    .lock().unwrap()
+                    .lock()
+                    .unwrap()
                     .set_addr(self.registers.get_hl(), byte8);
                 if flag {
                     self.registers.set_c();
@@ -1483,47 +1592,47 @@ impl CPU {
             // ANCHOR CALL NZ, a16 | [- - - -] | 3 | 24/12
             0xC4 => {
                 byte = self.get_next_byte16();
-                if !self.registers.is_set_z(){
+                if !self.registers.is_set_z() {
                     self.push(self.registers.pc);
                     self.registers.pc = byte;
                     self.cycle = 24;
-                }else{
+                } else {
                     self.cycle = 12;
                 }
-            } 
+            }
             // ANCHOR CALL Z, a16 | [- - - -] | 3 | 24/12
             0xCC => {
                 byte = self.get_next_byte16();
-                if self.registers.is_set_z(){
+                if self.registers.is_set_z() {
                     self.push(self.registers.pc);
                     self.registers.pc = byte;
                     self.cycle = 24;
-                }else{
+                } else {
                     self.cycle = 12;
                 }
-            } 
+            }
             // ANCHOR CALL NC, a16 | [- - - -] | 3 | 24/12
             0xD4 => {
                 byte = self.get_next_byte16();
-                if !self.registers.is_set_c(){
+                if !self.registers.is_set_c() {
                     self.push(self.registers.pc);
                     self.registers.pc = byte;
                     self.cycle = 24;
-                }else{
+                } else {
                     self.cycle = 12;
                 }
-            } 
+            }
             // ANCHOR CALL C, a16 | [- - - -] | 3 | 24/12
             0xDC => {
                 byte = self.get_next_byte16();
-                if self.registers.is_set_c(){
+                if self.registers.is_set_c() {
                     self.push(self.registers.pc);
                     self.registers.pc = byte;
                     self.cycle = 24;
-                }else{
+                } else {
                     self.cycle = 12;
                 }
-            } 
+            }
             // !SECTION
             //RLA
             0x17 => {
@@ -1544,44 +1653,42 @@ impl CPU {
             }
             // ANCHOR RET NZ | [- - - -] | 1 | 20/8
             0xC0 => {
-                if !self.registers.is_set_z(){
+                if !self.registers.is_set_z() {
                     byte = self.pop();
                     self.registers.pc = byte;
                     self.cycle = 20
-                }
-                else{
+                } else {
                     self.cycle = 8;
                 }
-            } 
+            }
             // ANCHOR RET Z | [- - - -] | 1 | 20/8
-            0xC8 => {                 
-                if self.registers.is_set_z(){
+            0xC8 => {
+                if self.registers.is_set_z() {
                     byte = self.pop();
                     self.registers.pc = byte;
                     self.cycle = 20
-                }else{
-                self.cycle = 8;
+                } else {
+                    self.cycle = 8;
                 }
             }
             // ANCHOR RET NC | [- - - -] | 1 | 20/8
             0xD0 => {
-                if !self.registers.is_set_c(){
+                if !self.registers.is_set_c() {
                     byte = self.pop();
                     self.registers.pc = byte;
                     self.cycle = 20
-                }
-                else{
+                } else {
                     self.cycle = 8;
                 }
-            } 
+            }
             // ANCHOR RET C | [- - - -] | 1 | 20/8
-            0xD8 => {                 
-                if self.registers.is_set_c(){
+            0xD8 => {
+                if self.registers.is_set_c() {
                     byte = self.pop();
                     self.registers.pc = byte;
                     self.cycle = 20
-                }else{
-                self.cycle = 8;
+                } else {
+                    self.cycle = 8;
                 }
             }
             // ANCHOR RETI | [- - - -] | 1 | 16
@@ -1629,13 +1736,12 @@ impl CPU {
                 self.rst(0x30);
                 self.cycle = 16;
             }
-            // ANCHOR RST 38H | [- - - -] | 1 | 16 
+            // ANCHOR RST 38H | [- - - -] | 1 | 16
             0xFF => {
                 self.rst(0x38);
                 self.cycle = 16;
             }
             // !SECTION
-
             _ => (panic!("Opcode missing in CPU : {:#0x?}", opcode)),
         }
         // !SECTION
@@ -1660,20 +1766,20 @@ impl CPU {
     pub fn get_state(&self) -> CPUState {
         self.state
     }
-    pub fn rst(&mut self,addr:u16){
+    pub fn rst(&mut self, addr: u16) {
         self.push(self.registers.pc);
         self.registers.pc = addr;
     }
 }
 // SECTION CPU ALU Trait
-trait ALU{
+trait ALU {
     fn add8(&mut self, a: u8, b: u8, carry: bool) -> u8;
     fn add16(&mut self, a: u16, b: u16, carry: bool) -> u16;
     fn sub8(&mut self, a: u8, b: u8, carry: bool) -> u8;
     fn sub16(&mut self, a: u16, b: u16, carry: bool) -> u16;
     fn daa(&mut self, a: u8) -> u8;
 }
-impl ALU for CPU{
+impl ALU for CPU {
     fn add8(&mut self, a: u8, b: u8, carry: bool) -> u8 {
         let mut carry_val: u8 = 0;
         if carry == true && (self.registers.is_set_c()) {
@@ -1820,24 +1926,30 @@ impl ALU for CPU{
 }
 // !SECTION
 // SECTION CPU Stack Trait
-pub trait Stack{
-    fn push(&mut self,a16: u16);
+pub trait Stack {
+    fn push(&mut self, a16: u16);
     fn pop(&mut self) -> u16;
 }
 
-impl Stack for CPU{
-    fn push(&mut self, a16: u16){
-        self.registers.sp-=1;
-        self.memory.lock().unwrap().set_addr(self.registers.sp,(a16>>8) as u8);
-        self.registers.sp-=1;
-        self.memory.lock().unwrap().set_addr(self.registers.sp,(a16 & 0x00ff) as u8);
+impl Stack for CPU {
+    fn push(&mut self, a16: u16) {
+        self.registers.sp -= 1;
+        self.memory
+            .lock()
+            .unwrap()
+            .set_addr(self.registers.sp, (a16 >> 8) as u8);
+        self.registers.sp -= 1;
+        self.memory
+            .lock()
+            .unwrap()
+            .set_addr(self.registers.sp, (a16 & 0x00ff) as u8);
     }
-    fn pop(&mut self) -> u16{
+    fn pop(&mut self) -> u16 {
         let mut byte: u16;
         byte = self.memory.lock().unwrap().get_addr(self.registers.sp) as u16;
-        self.registers.sp+=1;
+        self.registers.sp += 1;
         byte |= (self.memory.lock().unwrap().get_addr(self.registers.sp) as u16) << 8;
-        self.registers.sp+=1;
+        self.registers.sp += 1;
         byte
     }
 }
@@ -1870,12 +1982,12 @@ mod cpu_intruction_tests {
         pc: 0x0,
     };
 
-    use std::sync::{Mutex,Arc};
     use super::CPUState;
-    use super::CPU;
     use super::Memory;
     use super::Registers;
+    use super::CPU;
     use std::convert::TryInto;
+    use std::sync::{Arc, Mutex};
 
     // SECTION Macros
     macro_rules! registers {
@@ -1924,7 +2036,7 @@ mod cpu_intruction_tests {
             state: CPUState::Active,
             ime: ime,
         };
-        while cpu.state == CPUState::Active{
+        while cpu.state == CPUState::Active {
             cpu.execute();
         }
         let mem = *cpu.memory.lock().unwrap();
@@ -2000,12 +2112,12 @@ mod cpu_intruction_tests {
         )
     ];
     test_case![
-        Ox20_with_Z_not_set | 
-        (
+        Ox20_with_Z_not_set
+            | (
                 registers!(),
                 memory!(0x0=>0x20,0x1=>0x03,0x2=>0xFF,0x3=>0xFF,0x4=>0xFF,0x5=>0x76),
                 0
-        ),
+            ),
         (
             registers!(pc:6),
             memory!(0x0=>0x20,0x1=>0x03,0x2=>0xFF,0x3=>0xFF,0x4=>0xFF,0x5=>0x76),
@@ -2014,12 +2126,12 @@ mod cpu_intruction_tests {
     ];
     // ANCHOR 0xCB 0x7C | BIT 7, H | [Z 0 1 -] | 2 | 8
     test_case![
-        OxCB_Ox7C | 
-        (
+        OxCB_Ox7C
+            | (
                 registers!(h:0x80),
                 memory!(0x0=>0xcb,0x1=>0x7c,0x2=>0x76),
                 0
-        ),
+            ),
         (
             registers!(h:0x80,pc:3,f:SET_H),
             memory!(0x0=>0xcb,0x1=>0x7c,0x2=>0x76),
@@ -2028,12 +2140,12 @@ mod cpu_intruction_tests {
     ];
     // ANCHOR 0x28 | JR Z, r8 | [- - - -] | 12/8
     test_case![
-        Ox28_with_Z_set | 
-        (
+        Ox28_with_Z_set
+            | (
                 registers!(f: SET_Z),
                 memory!(0x0=>0x28,0x1=>0x02,0x2=>0x76,0x3=>0x76,0x4=>0x76),
                 0
-        ),
+            ),
         (
             registers!(pc:5,f:SET_Z),
             memory!(0x0=>0x28,0x1=>0x02,0x2=>0x76,0x3=>0x76,0x4=>0x76),
@@ -2080,7 +2192,7 @@ mod cpu_intruction_tests {
             4
         )
     ];
-    // ANCHOR 0x3C | INC A | [Z 0 H -] | 1 | 4 
+    // ANCHOR 0x3C | INC A | [Z 0 H -] | 1 | 4
     test_case![
         Ox3C_with_overflow
             | (
@@ -2119,12 +2231,7 @@ mod cpu_intruction_tests {
     ];
     // ANCHOR 0x06 | LD B, d8 | [- - - -] | 2 | 8
     test_case![
-        Ox06 | 
-        (
-            registers!(), 
-            memory!(0x0=>0x06,0x1=>0xFE,0x2=>0x76), 
-            0
-        ),
+        Ox06 | (registers!(), memory!(0x0=>0x06,0x1=>0xFE,0x2=>0x76), 0),
         (
             registers!(b:0xFE,pc:3),
             memory!(0x0=>0x06,0x1=>0xFE,0x2=>0x76),
@@ -2278,8 +2385,7 @@ mod cpu_intruction_tests {
     // SECTION Stack Operations
     // 0xC5 | PUSH BC | [- - - -] | 1 | 16
     test_case![
-        OxC5 |
-        (
+        OxC5 | (
             registers!(sp: 0xfffe,b:0x01,c:0x01),
             memory!(0x0=>0xC5,0x1=>0x76),
             0
@@ -2292,8 +2398,7 @@ mod cpu_intruction_tests {
     ];
     // 0xD5 | PUSH DE | [- - - -] | 1 | 16
     test_case![
-        OxD5 |
-        (
+        OxD5 | (
             registers!(sp: 0xfffe,d:0x01,e:0x01),
             memory!(0x0=>0xD5,0x1=>0x76),
             0
@@ -2306,8 +2411,7 @@ mod cpu_intruction_tests {
     ];
     // 0xE5 | PUSH HL | [- - - -] | 1 | 16
     test_case![
-        OxE5 |
-        (
+        OxE5 | (
             registers!(sp: 0xfffe,h:0x01,l:0x01),
             memory!(0x0=>0xE5,0x1=>0x76),
             0
@@ -2320,8 +2424,7 @@ mod cpu_intruction_tests {
     ];
     // 0xF5 | PUSH AF | [- - - -] | 1 | 16
     test_case![
-        OxF5 |
-        (
+        OxF5 | (
             registers!(sp: 0xfffe,a:0x01,f:0x01),
             memory!(0x0=>0xF5,0x1=>0x76),
             0
@@ -2332,10 +2435,9 @@ mod cpu_intruction_tests {
             16
         )
     ];
-    // 0xC1 | POP BC | [- - - -] | 1 | 12 
+    // 0xC1 | POP BC | [- - - -] | 1 | 12
     test_case![
-        OxC1 |
-        (
+        OxC1 | (
             registers!(sp:0xFFFC),
             memory!(0x0=>0xC1,0x1=>0x76,0xFFFC=>0x01,0xFFFD=>0x02),
             0
@@ -2346,10 +2448,9 @@ mod cpu_intruction_tests {
             12
         )
     ];
-    // 0xD1 | POP DE | [- - - -] | 1 | 12 
+    // 0xD1 | POP DE | [- - - -] | 1 | 12
     test_case![
-        OxD1 |
-        (
+        OxD1 | (
             registers!(sp:0xFFFC),
             memory!(0x0=>0xD1,0x1=>0x76,0xFFFC=>0x01,0xFFFD=>0x02),
             0
@@ -2360,10 +2461,9 @@ mod cpu_intruction_tests {
             12
         )
     ];
-    // 0xE1 | POP HL | [- - - -] | 1 | 12 
+    // 0xE1 | POP HL | [- - - -] | 1 | 12
     test_case![
-        OxE1 |
-        (
+        OxE1 | (
             registers!(sp:0xFFFC),
             memory!(0x0=>0xE1,0x1=>0x76,0xFFFC=>0x01,0xFFFD=>0x02),
             0
@@ -2374,10 +2474,9 @@ mod cpu_intruction_tests {
             12
         )
     ];
-    // 0xF1 | POP AF | [- - - -] | 1 | 12 
+    // 0xF1 | POP AF | [- - - -] | 1 | 12
     test_case![
-        OxF1 |
-        (
+        OxF1 | (
             registers!(sp:0xFFFC),
             memory!(0x0=>0xF1,0x1=>0x76,0xFFFC=>0x01,0xFFFD=>0x02),
             0
@@ -2393,8 +2492,7 @@ mod cpu_intruction_tests {
     // SECTION CALL Instructions
     // ANCHOR 0xCD | CALL a16 | [- - - -] | 3 | 24
     test_case![
-        OxCD | 
-        (
+        OxCD | (
             registers!(sp:0xFFFE),
             memory!(0x0=>0xCD,0x1=>0xFE,0x2=>0x7F,0x7FFE=>0x76),
             0
@@ -2407,12 +2505,12 @@ mod cpu_intruction_tests {
     ];
     // ANCHOR 0XC4 | CALL NZ, a16 | [- - - -] | 1 | 24/12
     test_case![
-        OxC4_with_Z_reset |
-        (
-            registers!(sp:0xFFFE),
-            memory!(0x0=>0xC4,0x1=>0xFE,0x2=>0x7F,0x3=>0x76,0x7FFE=>0x76),
-            0
-        ),
+        OxC4_with_Z_reset
+            | (
+                registers!(sp:0xFFFE),
+                memory!(0x0=>0xC4,0x1=>0xFE,0x2=>0x7F,0x3=>0x76,0x7FFE=>0x76),
+                0
+            ),
         (
             registers!(sp:0xFFFC,pc:0x7FFF),
             memory!(0x0=>0xC4,0x1=>0xFE,0x2=>0x7F,0x3=>0x76,0x7FFE=>0x76,0xFFFC=>0x03),
@@ -2420,12 +2518,12 @@ mod cpu_intruction_tests {
         )
     ];
     test_case![
-        OxC4_with_Z_set |
-        (
-            registers!(sp:0xFFFE,f: SET_Z),
-            memory!(0x0=>0xC4,0x1=>0xFE,0x2=>0x7F,0x3=>0x76,0x7FFE=>0x76),
-            0
-        ),
+        OxC4_with_Z_set
+            | (
+                registers!(sp:0xFFFE,f: SET_Z),
+                memory!(0x0=>0xC4,0x1=>0xFE,0x2=>0x7F,0x3=>0x76,0x7FFE=>0x76),
+                0
+            ),
         (
             registers!(sp:0xFFFE,f: SET_Z,pc:0x04),
             memory!(0x0=>0xC4,0x1=>0xFE,0x2=>0x7F,0x3=>0x76,0x7FFE=>0x76),
@@ -2434,12 +2532,12 @@ mod cpu_intruction_tests {
     ];
     // ANCHOR 0xCC | CALL Z, a16 | [- - - -] | 1 | 24/12
     test_case![
-        OxCC_with_Z_set |
-        (
-            registers!(sp:0xFFFE,f:SET_Z),
-            memory!(0x0=>0xCC,0x1=>0xFE,0x2=>0x7F,0x3=>0x76,0x7FFE=>0x76),
-            0
-        ),
+        OxCC_with_Z_set
+            | (
+                registers!(sp:0xFFFE,f:SET_Z),
+                memory!(0x0=>0xCC,0x1=>0xFE,0x2=>0x7F,0x3=>0x76,0x7FFE=>0x76),
+                0
+            ),
         (
             registers!(sp:0xFFFC,f:SET_Z,pc:0x7FFF),
             memory!(0x0=>0xCC,0x1=>0xFE,0x2=>0x7F,0x3=>0x76,0x7FFE=>0x76,0xFFFC=>0x03),
@@ -2447,12 +2545,12 @@ mod cpu_intruction_tests {
         )
     ];
     test_case![
-        OxCC_with_Z_reset |
-        (
-            registers!(sp:0xFFFE),
-            memory!(0x0=>0xCC,0x1=>0xFE,0x2=>0x7F,0x3=>0x76,0x7FFE=>0x76),
-            0
-        ),
+        OxCC_with_Z_reset
+            | (
+                registers!(sp:0xFFFE),
+                memory!(0x0=>0xCC,0x1=>0xFE,0x2=>0x7F,0x3=>0x76,0x7FFE=>0x76),
+                0
+            ),
         (
             registers!(sp:0xFFFE,pc:0x04),
             memory!(0x0=>0xCC,0x1=>0xFE,0x2=>0x7F,0x3=>0x76,0x7FFE=>0x76),
@@ -2461,12 +2559,12 @@ mod cpu_intruction_tests {
     ];
     // ANCHOR 0xD4 | CALL NC, a16 | [- - - -] | 1 | 24/12
     test_case![
-        OxD4_with_C_reset |
-        (
-            registers!(sp:0xFFFE),
-            memory!(0x0=>0xD4,0x1=>0xFE,0x2=>0x7F,0x3=>0x76,0x7FFE=>0x76),
-            0
-        ),
+        OxD4_with_C_reset
+            | (
+                registers!(sp:0xFFFE),
+                memory!(0x0=>0xD4,0x1=>0xFE,0x2=>0x7F,0x3=>0x76,0x7FFE=>0x76),
+                0
+            ),
         (
             registers!(sp:0xFFFC,pc:0x7FFF),
             memory!(0x0=>0xD4,0x1=>0xFE,0x2=>0x7F,0x3=>0x76,0x7FFE=>0x76,0xFFFC=>0x03),
@@ -2474,12 +2572,12 @@ mod cpu_intruction_tests {
         )
     ];
     test_case![
-        OxD4_with_C_set |
-        (
-            registers!(sp:0xFFFE,f: SET_C),
-            memory!(0x0=>0xD4,0x1=>0xFE,0x2=>0x7F,0x3=>0x76,0x7FFE=>0x76),
-            0
-        ),
+        OxD4_with_C_set
+            | (
+                registers!(sp:0xFFFE,f: SET_C),
+                memory!(0x0=>0xD4,0x1=>0xFE,0x2=>0x7F,0x3=>0x76,0x7FFE=>0x76),
+                0
+            ),
         (
             registers!(sp:0xFFFE,f: SET_C,pc:0x04),
             memory!(0x0=>0xD4,0x1=>0xFE,0x2=>0x7F,0x3=>0x76,0x7FFE=>0x76),
@@ -2488,12 +2586,12 @@ mod cpu_intruction_tests {
     ];
     // ANCHOR 0xDC | CALL C, a16 | [- - - -] | 1 | 24/12
     test_case![
-        OxDC_with_C_set |
-        (
-            registers!(sp:0xFFFE,f:SET_C),
-            memory!(0x0=>0xDC,0x1=>0xFE,0x2=>0x7F,0x3=>0x76,0x7FFE=>0x76),
-            0
-        ),
+        OxDC_with_C_set
+            | (
+                registers!(sp:0xFFFE,f:SET_C),
+                memory!(0x0=>0xDC,0x1=>0xFE,0x2=>0x7F,0x3=>0x76,0x7FFE=>0x76),
+                0
+            ),
         (
             registers!(sp:0xFFFC,f:SET_C,pc:0x7FFF),
             memory!(0x0=>0xDC,0x1=>0xFE,0x2=>0x7F,0x3=>0x76,0x7FFE=>0x76,0xFFFC=>0x03),
@@ -2501,12 +2599,12 @@ mod cpu_intruction_tests {
         )
     ];
     test_case![
-        OxDC_with_C_reset |
-        (
-            registers!(sp:0xFFFE),
-            memory!(0x0=>0xDC,0x1=>0xFE,0x2=>0x7F,0x3=>0x76,0x7FFE=>0x76),
-            0
-        ),
+        OxDC_with_C_reset
+            | (
+                registers!(sp:0xFFFE),
+                memory!(0x0=>0xDC,0x1=>0xFE,0x2=>0x7F,0x3=>0x76,0x7FFE=>0x76),
+                0
+            ),
         (
             registers!(sp:0xFFFE,pc:0x04),
             memory!(0x0=>0xDC,0x1=>0xFE,0x2=>0x7F,0x3=>0x76,0x7FFE=>0x76),
@@ -2514,12 +2612,11 @@ mod cpu_intruction_tests {
         )
     ];
     // !SECTION
-    
+
     // SECTION Return Instructions
     // ANCHOR 0XC9 | RET | [- - - -] | 1 | 16
     test_case![
-        OxC9 |
-        (
+        OxC9 | (
             registers!(sp:0xFFFC),
             memory!(0x0=>0xC9,0x1=>0x76,0x7FFF=>0x76,0xFFFC=>0xFF,0xFFFD=>0x7F),
             0
@@ -2532,12 +2629,12 @@ mod cpu_intruction_tests {
     ];
     // ANCHOR 0xC0 | RET NZ | [- - - -] | 1 | 20/8
     test_case![
-        OxC0_with_Z_reset |
-        (
-            registers!(sp:0xFFFC),
-            memory!(0x0=>0xC0,0x1=>0x76,0x7FFF=>0x76,0xFFFC=>0xFF,0xFFFD=>0x7F),
-            0
-        ),
+        OxC0_with_Z_reset
+            | (
+                registers!(sp:0xFFFC),
+                memory!(0x0=>0xC0,0x1=>0x76,0x7FFF=>0x76,0xFFFC=>0xFF,0xFFFD=>0x7F),
+                0
+            ),
         (
             registers!(sp:0xFFFE,pc:0x8000),
             memory!(0x0=>0xC0,0x1=>0x76,0x7FFF=>0x76,0xFFFC=>0xFF,0xFFFD=>0x7F),
@@ -2545,12 +2642,12 @@ mod cpu_intruction_tests {
         )
     ];
     test_case![
-        OxC0_with_Z_set |
-        (
-            registers!(sp:0xFFFC,f:SET_Z),
-            memory!(0x0=>0xC0,0x1=>0x76,0x7FFF=>0x76,0xFFFC=>0xFF,0xFFFD=>0x7F),
-            0
-        ),
+        OxC0_with_Z_set
+            | (
+                registers!(sp:0xFFFC,f:SET_Z),
+                memory!(0x0=>0xC0,0x1=>0x76,0x7FFF=>0x76,0xFFFC=>0xFF,0xFFFD=>0x7F),
+                0
+            ),
         (
             registers!(sp:0xFFFC,f:SET_Z,pc:0x02),
             memory!(0x0=>0xC0,0x1=>0x76,0x7FFF=>0x76,0xFFFC=>0xFF,0xFFFD=>0x7F),
@@ -2559,12 +2656,12 @@ mod cpu_intruction_tests {
     ];
     // ANCHOR 0xC8 | RET Z | [- - - -] | 1 | 20/8
     test_case![
-        OxC8_with_Z_set |
-        (
-            registers!(sp:0xFFFC,f:SET_Z),
-            memory!(0x0=>0xC8,0x1=>0x76,0x7FFF=>0x76,0xFFFC=>0xFF,0xFFFD=>0x7F),
-            0
-        ),
+        OxC8_with_Z_set
+            | (
+                registers!(sp:0xFFFC,f:SET_Z),
+                memory!(0x0=>0xC8,0x1=>0x76,0x7FFF=>0x76,0xFFFC=>0xFF,0xFFFD=>0x7F),
+                0
+            ),
         (
             registers!(sp:0xFFFE,f:SET_Z,pc:0x8000),
             memory!(0x0=>0xC8,0x1=>0x76,0x7FFF=>0x76,0xFFFC=>0xFF,0xFFFD=>0x7F),
@@ -2572,12 +2669,12 @@ mod cpu_intruction_tests {
         )
     ];
     test_case![
-        OxC8_with_Z_reset |
-        (
-            registers!(sp:0xFFFC),
-            memory!(0x0=>0xC8,0x1=>0x76,0x7FFF=>0x76,0xFFFC=>0xFF,0xFFFD=>0x7F),
-            0
-        ),
+        OxC8_with_Z_reset
+            | (
+                registers!(sp:0xFFFC),
+                memory!(0x0=>0xC8,0x1=>0x76,0x7FFF=>0x76,0xFFFC=>0xFF,0xFFFD=>0x7F),
+                0
+            ),
         (
             registers!(sp:0xFFFC,pc:0x02),
             memory!(0x0=>0xC8,0x1=>0x76,0x7FFF=>0x76,0xFFFC=>0xFF,0xFFFD=>0x7F),
@@ -2586,12 +2683,12 @@ mod cpu_intruction_tests {
     ];
     // ANCHOR 0xD0 | RET NC | [- - - -] | 1 | 20/8
     test_case![
-        OxD0_with_C_reset |
-        (
-            registers!(sp:0xFFFC),
-            memory!(0x0=>0xD0,0x1=>0x76,0x7FFF=>0x76,0xFFFC=>0xFF,0xFFFD=>0x7F),
-            0
-        ),
+        OxD0_with_C_reset
+            | (
+                registers!(sp:0xFFFC),
+                memory!(0x0=>0xD0,0x1=>0x76,0x7FFF=>0x76,0xFFFC=>0xFF,0xFFFD=>0x7F),
+                0
+            ),
         (
             registers!(sp:0xFFFE,pc:0x8000),
             memory!(0x0=>0xD0,0x1=>0x76,0x7FFF=>0x76,0xFFFC=>0xFF,0xFFFD=>0x7F),
@@ -2599,12 +2696,12 @@ mod cpu_intruction_tests {
         )
     ];
     test_case![
-        OxC0_with_C_set |
-        (
-            registers!(sp:0xFFFC,f:SET_C),
-            memory!(0x0=>0xD0,0x1=>0x76,0x7FFF=>0x76,0xFFFC=>0xFF,0xFFFD=>0x7F),
-            0
-        ),
+        OxC0_with_C_set
+            | (
+                registers!(sp:0xFFFC,f:SET_C),
+                memory!(0x0=>0xD0,0x1=>0x76,0x7FFF=>0x76,0xFFFC=>0xFF,0xFFFD=>0x7F),
+                0
+            ),
         (
             registers!(sp:0xFFFC,f:SET_C,pc:0x02),
             memory!(0x0=>0xD0,0x1=>0x76,0x7FFF=>0x76,0xFFFC=>0xFF,0xFFFD=>0x7F),
@@ -2613,12 +2710,12 @@ mod cpu_intruction_tests {
     ];
     // ANCHOR 0xD8 | RET C | [- - - -] | 1 | 20/8
     test_case![
-        OxD8_with_C_set |
-        (
-            registers!(sp:0xFFFC,f:SET_C),
-            memory!(0x0=>0xD8,0x1=>0x76,0x7FFF=>0x76,0xFFFC=>0xFF,0xFFFD=>0x7F),
-            0
-        ),
+        OxD8_with_C_set
+            | (
+                registers!(sp:0xFFFC,f:SET_C),
+                memory!(0x0=>0xD8,0x1=>0x76,0x7FFF=>0x76,0xFFFC=>0xFF,0xFFFD=>0x7F),
+                0
+            ),
         (
             registers!(sp:0xFFFE,f:SET_C,pc:0x8000),
             memory!(0x0=>0xD8,0x1=>0x76,0x7FFF=>0x76,0xFFFC=>0xFF,0xFFFD=>0x7F),
@@ -2626,12 +2723,12 @@ mod cpu_intruction_tests {
         )
     ];
     test_case![
-        OxD8_with_Z_reset |
-        (
-            registers!(sp:0xFFFC),
-            memory!(0x0=>0xD8,0x1=>0x76,0x7FFF=>0x76,0xFFFC=>0xFF,0xFFFD=>0x7F),
-            0
-        ),
+        OxD8_with_Z_reset
+            | (
+                registers!(sp:0xFFFC),
+                memory!(0x0=>0xD8,0x1=>0x76,0x7FFF=>0x76,0xFFFC=>0xFF,0xFFFD=>0x7F),
+                0
+            ),
         (
             registers!(sp:0xFFFC,pc:0x02),
             memory!(0x0=>0xD8,0x1=>0x76,0x7FFF=>0x76,0xFFFC=>0xFF,0xFFFD=>0x7F),
@@ -2640,18 +2737,18 @@ mod cpu_intruction_tests {
     ];
     // ANCHOR RETI | [- - - -] | 1 | 16
     #[test]
-    fn OxD9(){
-        let current_state = (            
+    fn OxD9() {
+        let current_state = (
             registers!(sp:0xFFFC),
             memory!(0x0=>0xD9,0x1=>0x76,0x7FFF=>0x76,0xFFFC=>0xFF,0xFFFD=>0x7F),
             0,
-            false
+            false,
         );
-        let expected_state = (            
+        let expected_state = (
             registers!(sp:0xFFFE,pc:0x8000),
             memory!(0x0=>0xD9,0x1=>0x76,0x7FFF=>0x76,0xFFFC=>0xFF,0xFFFD=>0x7F),
             16,
-            true
+            true,
         );
 
         let memory = Arc::new(Mutex::new(current_state.1));
@@ -2664,21 +2761,23 @@ mod cpu_intruction_tests {
             state: CPUState::Active,
             ime: ime,
         };
-        while cpu.state == CPUState::Active{
+        while cpu.state == CPUState::Active {
             cpu.execute();
         }
 
         let mem = *cpu.memory.lock().unwrap();
         let ime_ = *cpu.ime.lock().unwrap();
-        assert_eq!((cpu.get_registers(), mem, cpu.get_cycles(), ime_),expected_state);
+        assert_eq!(
+            (cpu.get_registers(), mem, cpu.get_cycles(), ime_),
+            expected_state
+        );
     }
     // !SECTION
 
     // SECTION Reset Instructions
     // ANCHOR 0xC7 | RST 00H | [- - - -] | 1 | 16
     test_case![
-        OxC7 |
-        (
+        OxC7 | (
             registers!(sp:0xFFFE,pc:0x04),
             memory!(0x0=>0x76,0x04=>0xC7,0x05=>0x76),
             0
@@ -2691,8 +2790,7 @@ mod cpu_intruction_tests {
     ];
     // ANCHOR 0xCF | RST 08H | [- - - -] | 1 | 16
     test_case![
-        OxCF |
-        (
+        OxCF | (
             registers!(sp:0xFFFE,pc:0x04),
             memory!(0x08=>0x76,0x04=>0xCF,0x05=>0x76),
             0
@@ -2705,8 +2803,7 @@ mod cpu_intruction_tests {
     ];
     // ANCHOR 0xD7 | RST 10H | [- - - -] | 1 | 16
     test_case![
-        OxD7 |
-        (
+        OxD7 | (
             registers!(sp:0xFFFE,pc:0x04),
             memory!(0x10=>0x76,0x04=>0xD7,0x05=>0x76),
             0
@@ -2719,8 +2816,7 @@ mod cpu_intruction_tests {
     ];
     // ANCHOR 0xDF | RST 18H | [- - - -] | 1 | 16
     test_case![
-        OxDF |
-        (
+        OxDF | (
             registers!(sp:0xFFFE,pc:0x04),
             memory!(0x18=>0x76,0x04=>0xDF,0x05=>0x76),
             0
@@ -2733,8 +2829,7 @@ mod cpu_intruction_tests {
     ];
     // ANCHOR 0xE7 | RST 20H | [- - - -] | 1 | 16
     test_case![
-        OxE7 |
-        (
+        OxE7 | (
             registers!(sp:0xFFFE,pc:0x04),
             memory!(0x20=>0x76,0x04=>0xE7,0x05=>0x76),
             0
@@ -2747,8 +2842,7 @@ mod cpu_intruction_tests {
     ];
     // ANCHOR 0xEF | RST 28H | [- - - -] | 1 | 16
     test_case![
-        OxEF |
-        (
+        OxEF | (
             registers!(sp:0xFFFE,pc:0x04),
             memory!(0x28=>0x76,0x04=>0xEF,0x05=>0x76),
             0
@@ -2761,8 +2855,7 @@ mod cpu_intruction_tests {
     ];
     // ANCHOR 0xF7 | RST 30H | [- - - -] | 1 | 16
     test_case![
-        OxF7 |
-        (
+        OxF7 | (
             registers!(sp:0xFFFE,pc:0x04),
             memory!(0x30=>0x76,0x04=>0xF7,0x05=>0x76),
             0
@@ -2773,10 +2866,9 @@ mod cpu_intruction_tests {
             16
         )
     ];
-    // ANCHOR 0xFF | RST 38H | [- - - -] | 1 | 16 
+    // ANCHOR 0xFF | RST 38H | [- - - -] | 1 | 16
     test_case![
-        OxFF |
-        (
+        OxFF | (
             registers!(sp:0xFFFE,pc:0x04),
             memory!(0x38=>0x76,0x04=>0xFF,0x05=>0x76),
             0

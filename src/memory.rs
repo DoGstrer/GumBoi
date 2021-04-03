@@ -66,14 +66,14 @@ impl Memory {
         }
     }
     //TODO : Better API
-    pub fn load_cartridge(&mut self,cartridge_rom: Vec<u8>){
-        match cartridge_rom{
+    pub fn load_cartridge(&mut self, cartridge_rom: Vec<u8>) {
+        match cartridge_rom {
             cartridge_rom if cartridge_rom.len() < 0x8000 => {
-                for (index,val) in cartridge_rom.iter().enumerate(){
+                for (index, val) in cartridge_rom.iter().enumerate() {
                     self.bank[index] = *val;
                 }
-            },
-            _ => panic!("Inserted Cartridge Exceeds 32Kb!")
+            }
+            _ => panic!("Inserted Cartridge Exceeds 32Kb!"),
         };
     }
 }

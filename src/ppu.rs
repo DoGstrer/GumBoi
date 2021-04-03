@@ -20,7 +20,7 @@ CALL B6 FF at 0x6D FOR Super Mario
 use super::GumBoi;
 use super::Memory;
 
-use std::sync::{Arc,Mutex};
+use std::sync::{Arc, Mutex};
 
 const LCDC: u16 = 0xFF40;
 
